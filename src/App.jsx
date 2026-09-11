@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Login from "./login";
 
 import "./App.css";
 
@@ -7,6 +8,7 @@ function App() {
 
   const [activeMenu, setActiveMenu] =
     useState("home");
+
 
 
   // Navigation function
@@ -236,57 +238,45 @@ function App() {
 
         {/* ================= HEADER ================= */}
 
-        <header className="top-header">
+  
 
+<header className="top-header">
 
-          <div className="header-left">
+  <div className="header-left">
 
+    <img
+      src="/college-logo.png"
+      alt="College Logo"
+    />
 
-            <img
-              src="/college-logo.png"
-              alt="College Logo"
-            />
+    <div>
 
+      <h1>
+        SRI VENKATESWARA
+      </h1>
 
-            <div>
+      <p>
+        College of Engineering and Technology
+      </p>
 
-              <h1>
-                SRI VENKATESWARA
-              </h1>
+    </div>
 
-              <p>
-                College of Engineering and Technology
-              </p>
+  </div>
+  <div className="header-right">
 
-            </div>
-
-
-          </div>
-
-
-
-          <div className="header-right">
-
-
-            <p>
-              An Autonomous Institution
-            </p>
-
-
-            <button className="hamburger">
-
-              ☰
-
-            </button>
-
-
-          </div>
-
-
-        </header>
-
-
-
+    <p>
+      An Autonomous Institution
+    </p>
+    {activeMenu !== "login" && (
+    <button
+      className="login-button"
+      onClick={() => navigateTo("login")}
+    >
+      Login
+    </button>
+    )}
+  </div>
+</header>
         {/* ================= HOME ================= */}
         {activeMenu === "home" && (
 
@@ -378,7 +368,7 @@ function App() {
 
             <img
 
-              src="/campus.jpg"
+              src="college-campus.png"
 
               alt="College Campus"
 
@@ -886,6 +876,12 @@ function App() {
         </section>
         )}
 
+        {/* ================= LOGIN ================= */}
+
+{activeMenu === "login" && (
+  <Login />
+)}
+
 
 
         {/* ================= FOOTER ================= */}
@@ -964,7 +960,7 @@ function App() {
       </main>
 
 
-    </div>
+  </div>
 
   );
 
