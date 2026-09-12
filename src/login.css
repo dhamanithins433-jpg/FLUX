@@ -1,21 +1,20 @@
 /* =========================================
-   PREMIUM LOGIN PAGE
+   PREMIUM SVCET LOGIN / SIGNUP
 ========================================= */
 
 .login-page {
   width: 100%;
   min-height: calc(100vh - 90px);
-
   display: flex;
-
-  background: #f5f7fb;
-
+  background:
+    radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.05), transparent 30%),
+    #f5f7fb;
   font-family: "Montserrat", sans-serif;
 }
 
 
 /* =========================================
-   LEFT BRAND SECTION
+   LEFT BRAND PANEL
 ========================================= */
 
 .login-brand {
@@ -33,9 +32,14 @@
 
   background:
     radial-gradient(
-      circle at 20% 20%,
+      circle at 15% 15%,
       rgba(37, 99, 235, 0.35),
-      transparent 35%
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 90% 90%,
+      rgba(212, 175, 55, 0.12),
+      transparent 30%
     ),
     linear-gradient(
       145deg,
@@ -53,17 +57,17 @@
 .brand-glow {
   position: absolute;
 
-  width: 350px;
-  height: 350px;
+  width: 380px;
+  height: 380px;
 
-  right: -150px;
-  top: -120px;
+  right: -170px;
+  top: -150px;
 
   border-radius: 50%;
 
-  background: rgba(212, 175, 55, 0.12);
+  background: rgba(212, 175, 55, 0.11);
 
-  filter: blur(5px);
+  filter: blur(8px);
 }
 
 
@@ -72,44 +76,11 @@
 .brand-content {
   position: relative;
   z-index: 2;
-
   max-width: 500px;
 }
 
 
-/* Logo */
-
-.brand-logo {
-  width: 82px;
-  height: 82px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 50%;
-
-  border: 2px solid rgba(212, 175, 55, 0.8);
-
-  background: rgba(255, 255, 255, 0.08);
-
-  box-shadow:
-    0 0 0 8px rgba(212, 175, 55, 0.05),
-    0 15px 40px rgba(0, 0, 0, 0.3);
-
-  margin-bottom: 25px;
-}
-
-
-.brand-logo span {
-  font-size: 27px;
-  font-weight: 800;
-
-  color: #d4af37;
-}
-
-
-/* College name */
+/* College heading */
 
 .brand-content h1 {
   margin: 0;
@@ -118,6 +89,18 @@
   font-weight: 800;
 
   letter-spacing: 5px;
+
+  background: linear-gradient(
+  90deg,
+  #ffffff,
+  #dbe7ff
+);
+
+background-clip: text;
+-webkit-background-clip: text;
+
+-webkit-text-fill-color: transparent;
+color: transparent;
 }
 
 
@@ -143,18 +126,26 @@
 
   border-radius: 10px;
 
-  background: #d4af37;
+  background: linear-gradient(
+    90deg,
+    #d4af37,
+    #f3d77b
+  );
+
+  box-shadow:
+    0 0 15px rgba(212, 175, 55, 0.3);
 }
 
 
 .brand-description {
+  max-width: 430px;
+
   font-size: 14px;
 
   line-height: 1.8;
 
   color: #b9c8e3;
-
-  max-width: 430px;
+  
 }
 
 
@@ -162,7 +153,6 @@
 
 .brand-features {
   display: flex;
-
   gap: 25px;
 
   margin-top: 35px;
@@ -185,6 +175,8 @@
   color: #d4af37;
 
   font-size: 15px;
+
+  font-weight: 800;
 }
 
 
@@ -203,7 +195,7 @@
 
 
 /* =========================================
-   RIGHT LOGIN SECTION
+   RIGHT SECTION
 ========================================= */
 
 .login-section {
@@ -214,10 +206,14 @@
   justify-content: center;
 
   padding: 45px;
+
+  position: relative;
 }
 
 
-/* Login card */
+/* =========================================
+   PREMIUM CARD
+========================================= */
 
 .login-card {
   width: 100%;
@@ -225,46 +221,90 @@
 
   padding: 42px;
 
-  background: white;
+  position: relative;
 
-  border-radius: 22px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(250, 252, 255, 0.98)
+    );
 
-  border: 1px solid #e7ebf3;
+  border-radius: 24px;
+
+  border: 1px solid rgba(226, 232, 240, 0.9);
 
   box-shadow:
-    0 25px 70px rgba(7, 29, 66, 0.12);
+    0 30px 80px rgba(7, 29, 66, 0.12),
+    0 8px 25px rgba(7, 29, 66, 0.05);
 
   animation: loginAppear 0.5s ease;
 }
 
 
+.signup-card {
+  max-width: 500px;
+}
+
+
+/* Subtle top highlight */
+
+.login-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 12%;
+
+  width: 76%;
+  height: 1px;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(37, 99, 235, 0.35),
+    transparent
+  );
+}
+
+
+/* =========================================
+   CARD ANIMATION
+========================================= */
+
 @keyframes loginAppear {
 
   from {
     opacity: 0;
-    transform: translateY(15px);
+    transform: translateY(18px) scale(0.985);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 
 }
 
 
 /* =========================================
-   LOGIN HEADER
+   HEADER
 ========================================= */
 
-.welcome-text {
-  margin: 0 0 8px;
+.login-top {
+  margin-bottom: 28px;
+}
 
-  font-size: 11px;
+
+.welcome-text {
+  margin: 0 0 9px;
+
+  font-size: 10px;
 
   font-weight: 800;
 
-  letter-spacing: 2px;
+  letter-spacing: 2.5px;
 
   color: #2563eb;
 }
@@ -278,15 +318,19 @@
   color: #071a3d;
 
   font-weight: 800;
+
+  letter-spacing: -0.5px;
 }
 
 
 .login-subtitle {
-  margin-top: 8px;
+  margin-top: 9px;
 
   font-size: 13px;
 
   color: #7b879c;
+
+  line-height: 1.6;
 }
 
 
@@ -310,9 +354,13 @@
 
   border: 1px solid #e3e8f1;
 
-  background: #f8faff;
+  background: linear-gradient(
+    145deg,
+    #fbfcff,
+    #f4f7fc
+  );
 
-  border-radius: 12px;
+  border-radius: 13px;
 
   cursor: pointer;
 
@@ -350,31 +398,35 @@
   border-color: #2563eb;
 
   transform: translateY(-2px);
+
+  box-shadow:
+    0 8px 20px rgba(37, 99, 235, 0.08);
 }
 
 
 .role.active {
-  background: linear-gradient(
-    135deg,
-    #071a3d,
-    #123d7a
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #071a3d,
+      #123d7a
+    );
 
   color: white;
 
   border-color: #071a3d;
 
   box-shadow:
-    0 8px 20px rgba(7, 26, 61, 0.2);
+    0 10px 25px rgba(7, 26, 61, 0.22);
 }
 
 
 /* =========================================
-   INPUTS
+   INPUT GROUP
 ========================================= */
 
 .input-group {
-  margin-bottom: 20px;
+  margin-bottom: 19px;
 }
 
 
@@ -383,13 +435,19 @@
 
   margin-bottom: 8px;
 
-  font-size: 12px;
+  font-size: 11px;
 
-  font-weight: 700;
+  font-weight: 800;
 
   color: #344054;
+
+  letter-spacing: 0.2px;
 }
 
+
+/* =========================================
+   INPUT BOX
+========================================= */
 
 .input-box {
   height: 52px;
@@ -399,11 +457,19 @@
 
   border: 1px solid #dfe5ef;
 
-  border-radius: 10px;
+  border-radius: 11px;
 
   background: #fafbfd;
 
-  transition: 0.25s;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+
+
+.input-box:hover {
+  border-color: #cbd5e1;
 }
 
 
@@ -413,7 +479,8 @@
   background: white;
 
   box-shadow:
-    0 0 0 3px rgba(37, 99, 235, 0.08);
+    0 0 0 4px rgba(37, 99, 235, 0.07),
+    0 5px 18px rgba(37, 99, 235, 0.05);
 }
 
 
@@ -453,7 +520,9 @@
 }
 
 
-/* Password eye */
+/* =========================================
+   PASSWORD TOGGLE
+========================================= */
 
 .password-toggle {
   border: none;
@@ -465,11 +534,20 @@
   padding: 10px;
 
   font-size: 15px;
+
+  opacity: 0.65;
+
+  transition: 0.2s;
+}
+
+
+.password-toggle:hover {
+  opacity: 1;
 }
 
 
 /* =========================================
-   OPTIONS
+   LOGIN OPTIONS
 ========================================= */
 
 .login-options {
@@ -528,7 +606,7 @@
 
 
 /* =========================================
-   MAIN LOGIN BUTTON
+   PREMIUM MAIN BUTTON
 ========================================= */
 
 .main-login-btn {
@@ -538,13 +616,15 @@
 
   border: none;
 
-  border-radius: 10px;
+  border-radius: 11px;
 
-  background: linear-gradient(
-    135deg,
-    #0a2d63,
-    #2563eb
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #071a3d 0%,
+      #0a2d63 45%,
+      #2563eb 100%
+    );
 
   color: white;
 
@@ -564,9 +644,11 @@
   gap: 12px;
 
   box-shadow:
-    0 10px 25px rgba(37, 99, 235, 0.22);
+    0 12px 28px rgba(37, 99, 235, 0.22);
 
-  transition: all 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 
@@ -581,12 +663,203 @@
   transform: translateY(-2px);
 
   box-shadow:
-    0 15px 30px rgba(37, 99, 235, 0.3);
+    0 17px 35px rgba(37, 99, 235, 0.28);
 }
 
 
 .main-login-btn:hover span {
   transform: translateX(5px);
+}
+
+
+.main-login-btn:active {
+  transform: translateY(0);
+}
+
+
+/* =========================================
+   CREATE ACCOUNT
+========================================= */
+
+.create-account {
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  gap: 6px;
+
+  margin-top: 20px;
+
+  font-size: 11px;
+
+  color: #7b879c;
+}
+
+
+.create-account-btn {
+  border: none;
+
+  background: transparent;
+
+  padding: 0;
+
+  color: #2563eb;
+
+  font-family: "Montserrat", sans-serif;
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+
+.create-account-btn:hover {
+  color: #071a3d;
+
+  text-decoration: underline;
+}
+
+
+/* =========================================
+   PREMIUM DEPARTMENT DROPDOWN
+========================================= */
+
+.signup-select-box {
+  position: relative;
+
+  padding: 0;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      145deg,
+      #fafbfd,
+      #f6f8fc
+    );
+}
+
+
+.signup-select-box:hover {
+  border-color: #cbd5e1;
+}
+
+
+.signup-select-box select {
+  width: 100%;
+
+  height: 100%;
+
+  min-height: 52px;
+
+  border: none;
+
+  outline: none;
+
+  background: transparent;
+
+  padding: 0 50px 0 16px;
+
+  font-family: "Montserrat", sans-serif;
+
+  font-size: 12px;
+
+  font-weight: 500;
+
+  color: #172033;
+
+  appearance: none;
+
+  -webkit-appearance: none;
+
+  cursor: pointer;
+}
+
+
+.signup-select-box select:invalid {
+  color: #a1aabc;
+}
+
+
+.signup-select-box select option {
+  background: #ffffff;
+
+  color: #172033;
+
+  font-family: "Montserrat", sans-serif;
+
+  font-size: 12px;
+
+  padding: 12px;
+}
+
+
+/* Dropdown arrow */
+
+.select-arrow {
+  position: absolute;
+
+  right: 17px;
+
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  width: 25px;
+  height: 25px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: rgba(37, 99, 235, 0.07);
+
+  color: #2563eb;
+
+  font-size: 17px;
+
+  font-weight: 700;
+
+  pointer-events: none;
+
+  transition: 0.25s ease;
+}
+
+
+.signup-select-box:focus-within .select-arrow {
+  background: #2563eb;
+
+  color: white;
+
+  transform:
+    translateY(-50%)
+    rotate(180deg);
+}
+
+
+/* =========================================
+   SIGNUP BACK TO LOGIN
+========================================= */
+
+.signup-back {
+  justify-content: center;
+
+  margin-top: 20px;
+
+  padding-top: 2px;
+}
+
+
+.signup-back .create-account-btn {
+  font-weight: 800;
 }
 
 
@@ -602,28 +875,38 @@
   font-size: 9px;
 
   color: #98a3b5;
+
+  letter-spacing: 0.1px;
+}
+
+
+.signup-card .secure-note {
+  margin-top: 22px;
 }
 
 
 /* =========================================
-   RESPONSIVE
+   RESPONSIVE — TABLET
 ========================================= */
 
 @media (max-width: 900px) {
 
   .login-brand {
     width: 38%;
-
+    
     padding: 35px;
   }
+
 
   .brand-content h1 {
     font-size: 40px;
   }
 
+
   .brand-description {
     font-size: 12px;
   }
+
 
   .brand-features {
     flex-direction: column;
@@ -631,16 +914,27 @@
     gap: 12px;
   }
 
+
   .brand-bottom {
     left: 35px;
   }
+
 
   .login-section {
     padding: 25px;
   }
 
+
+  .signup-card {
+    max-width: 480px;
+  }
+
 }
 
+
+/* =========================================
+   RESPONSIVE — MOBILE
+========================================= */
 
 @media (max-width: 700px) {
 
@@ -650,6 +944,7 @@
     min-height: calc(100vh - 70px);
   }
 
+
   .login-brand {
     width: 100%;
 
@@ -658,47 +953,55 @@
     padding: 35px;
   }
 
-  .brand-logo {
-    width: 60px;
-    height: 60px;
-
-    margin-bottom: 15px;
-  }
-
-  .brand-logo span {
-    font-size: 20px;
-  }
-
-  .brand-content h1 {
+.brand-content h1 {
     font-size: 35px;
   }
+
 
   .brand-title {
     font-size: 12px;
   }
+
 
   .brand-description,
   .brand-features {
     display: none;
   }
 
+
   .brand-bottom {
     left: 35px;
     bottom: 15px;
   }
 
+
   .login-section {
     padding: 25px 15px;
   }
 
-  .login-card {
-    padding: 28px 22px;
 
-    border-radius: 18px;
+  .login-card {
+    padding: 30px 22px;
+
+    border-radius: 20px;
+  }
+
+
+  .signup-card {
+    max-width: none;
+  }
+
+
+  .signup-select-box select {
+    font-size: 11px;
   }
 
 }
 
+
+/* =========================================
+   RESPONSIVE — SMALL MOBILE
+========================================= */
 
 @media (max-width: 400px) {
 
@@ -706,16 +1009,148 @@
     height: 70px;
   }
 
+
   .role span {
     font-size: 18px;
   }
+
 
   .role small {
     font-size: 9px;
   }
 
+
   .login-top h2 {
     font-size: 25px;
   }
 
+
+  .create-account {
+    flex-wrap: wrap;
+
+    text-align: center;
+  }
+
 }
+/* ================================
+   PREMIUM SIGNUP PASSWORD TOGGLE
+   ================================ */
+
+.signup-password-toggle {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 7px 10px;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.signup-password-toggle:hover {
+  background: rgba(201, 162, 39, 0.10);
+  color: #2563eb;
+}
+
+.signup-password-toggle:active {
+  transform: scale(0.96);
+}
+/* Premium Password Mismatch Warning */
+
+.password-warning {
+  margin: 8px 2px 0;
+  padding: 8px 12px;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  border: 1px solid rgba(220, 70, 70, 0.25);
+  border-radius: 9px;
+
+  background: rgba(220, 70, 70, 0.07);
+
+  color: #d85b5b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+
+  animation: passwordWarningIn 0.22s ease-out;
+}
+
+@keyframes passwordWarningIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Premium Register Number Warning */
+
+.register-number-warning {
+  margin: 8px 2px 0;
+  padding: 8px 12px;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  border: 1px solid rgba(220, 70, 70, 0.25);
+  border-radius: 9px;
+
+  background: rgba(220, 70, 70, 0.07);
+
+  color: #d85b5b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+
+  animation: registerWarningIn 0.22s ease-out;
+}
+
+@keyframes registerWarningIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Premium Password Strength Warning */
+
+.password-strength-warning {
+  margin: 8px 2px 0;
+  padding: 8px 12px;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  border: 1px solid rgba(220, 70, 70, 0.25);
+  border-radius: 9px;
+
+  background: rgba(220, 70, 70, 0.07);
+
+  color: #d85b5b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.1px;
+
+  animation: passwordStrengthWarningIn 0.22s ease-out;
+}
+
+@keyframes passwordStrengthWarningIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px)
+  }}
