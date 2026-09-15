@@ -1,0 +1,5 @@
+faculty_id,name,email,phone,department,designation,password
+FAC001,Dr. Ramanathan K,ramanathan@svcet.edu.in,9876543220,Computer Science Engineering,Professor & HOD,faculty123
+FAC002,Dr. Priya S,priya@svcet.edu.in,9876543221,Information Technology,Associate Professor,faculty123
+FAC003,Prof. Vignesh M,vignesh@svcet.edu.in,9876543222,Electronics & Communication,Assistant Professor,faculty123
+FAC004,Dr. Kavitha R,kavitha@svcet.edu.in,9876543223,Mechanical Engineering,Associate Professor,faculty123

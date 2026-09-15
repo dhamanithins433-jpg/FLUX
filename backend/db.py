@@ -157,7 +157,9 @@ class DatabaseManager:
                 name VARCHAR(100) NOT NULL,
                 department VARCHAR(100),
                 email VARCHAR(100),
-                designation VARCHAR(100)
+                phone VARCHAR(20) DEFAULT '',
+                designation VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """,
             f"""
@@ -274,7 +276,7 @@ class DatabaseManager:
         # Ensure subjects, students, and users have all required columns
         try:
             if is_mysql:
-                # Subjects migrations
+                # Subjects & Faculty migrations
                 for col_stmt in [
                     "ALTER TABLE subjects ADD COLUMN semester_id INT DEFAULT NULL",
                     "ALTER TABLE subjects ADD COLUMN credits INT DEFAULT 3",
@@ -285,7 +287,10 @@ class DatabaseManager:
                     "ALTER TABLE users ADD COLUMN batch VARCHAR(20) DEFAULT '2024-2028'",
                     "ALTER TABLE users ADD COLUMN year INT DEFAULT 1",
                     "ALTER TABLE users ADD COLUMN semester INT DEFAULT 1",
-                    "ALTER TABLE users ADD COLUMN section VARCHAR(10) DEFAULT 'A'"
+                    "ALTER TABLE users ADD COLUMN section VARCHAR(10) DEFAULT 'A'",
+                    "ALTER TABLE users ADD COLUMN designation VARCHAR(100) DEFAULT ''",
+                    "ALTER TABLE teachers ADD COLUMN phone VARCHAR(20) DEFAULT ''",
+                    "ALTER TABLE teachers ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
                 ]:
                     try:
                         cursor.execute(col_stmt)
@@ -296,6 +301,7 @@ class DatabaseManager:
                 for idx_stmt in [
                     "CREATE INDEX idx_students_reg ON students(register_no)",
                     "CREATE INDEX idx_users_uid ON users(user_id)",
+                    "CREATE INDEX idx_teachers_fac ON teachers(faculty_id)",
                     "CREATE INDEX idx_att_reg ON attendance(register_no)",
                     "CREATE INDEX idx_marks_reg ON marks(register_no)",
                     "CREATE INDEX idx_fees_reg ON fees(register_no)",
@@ -335,11 +341,21 @@ class DatabaseManager:
                     cursor.execute("ALTER TABLE users ADD COLUMN semester INT DEFAULT 1")
                 if 'section' not in existing_cols_usr:
                     cursor.execute("ALTER TABLE users ADD COLUMN section VARCHAR(10) DEFAULT 'A'")
+                if 'designation' not in existing_cols_usr:
+                    cursor.execute("ALTER TABLE users ADD COLUMN designation VARCHAR(100) DEFAULT ''")
+
+                cursor.execute("PRAGMA table_info(teachers)")
+                existing_cols_tea = [row[1] for row in cursor.fetchall()]
+                if 'phone' not in existing_cols_tea:
+                    cursor.execute("ALTER TABLE teachers ADD COLUMN phone VARCHAR(20) DEFAULT ''")
+                if 'created_at' not in existing_cols_tea:
+                    cursor.execute("ALTER TABLE teachers ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
 
                 # Indexes for SQLite
                 for idx_stmt in [
                     "CREATE INDEX IF NOT EXISTS idx_students_reg ON students(register_no)",
                     "CREATE INDEX IF NOT EXISTS idx_users_uid ON users(user_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_teachers_fac ON teachers(faculty_id)",
                     "CREATE INDEX IF NOT EXISTS idx_att_reg ON attendance(register_no)",
                     "CREATE INDEX IF NOT EXISTS idx_marks_reg ON marks(register_no)",
                     "CREATE INDEX IF NOT EXISTS idx_fees_reg ON fees(register_no)",

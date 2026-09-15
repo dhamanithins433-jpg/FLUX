@@ -32,6 +32,25 @@ function TeacherPortal({ user, initialTab }) {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [profile, setProfile] = useState(null);
+
+  // Fetch verified faculty profile from database
+  useEffect(() => {
+    fetch(`${API_BASE}/faculty/profile`, { headers: getAuthHeaders() })
+      .then((r) => {
+        if (r.ok) return r.json();
+        return null;
+      })
+      .then((data) => {
+        if (data && data.profile) {
+          setProfile(data.profile);
+          if (data.profile.department) {
+            setSelectedDept(data.profile.department);
+          }
+        }
+      })
+      .catch((err) => console.error("Error fetching faculty profile:", err));
+  }, []);
 
   // Load Subjects on mount / dept change
   useEffect(() => {
@@ -159,7 +178,7 @@ function TeacherPortal({ user, initialTab }) {
         body: JSON.stringify({
           date: selectedDate,
           subject_code: selectedSubject,
-          recorded_by: user?.userId || user?.user_id || "FAC001",
+          recorded_by: profile?.faculty_id || user?.faculty_id || user?.userId || user?.user_id || "FAC001",
           records: attendanceRecords.map((r) => ({
             register_no: r.register_no,
             status: r.status,
@@ -232,7 +251,7 @@ function TeacherPortal({ user, initialTab }) {
         body: JSON.stringify({
           subject_code: selectedSubject,
           exam_type: selectedExam,
-          recorded_by: user?.userId || user?.user_id || "FAC001",
+          recorded_by: profile?.faculty_id || user?.faculty_id || user?.userId || user?.user_id || "FAC001",
           records: marksRecords.map((r) => ({
             register_no: r.register_no,
             marks_obtained: Number(r.marks_obtained) || 0,
@@ -291,7 +310,7 @@ function TeacherPortal({ user, initialTab }) {
           <span className="portal-pill teacher">FACULTY PORTAL</span>
           <h2>Faculty Academic & Attendance Management</h2>
           <p>
-            Logged in: <strong>{user?.name || "Faculty Member"}</strong> ({user?.userId || user?.user_id || "FAC001"}) • {selectedDept} • SVCET Campus
+            Logged in: <strong>{profile?.name || user?.name || "Faculty Member"}</strong> ({profile?.faculty_id || user?.faculty_id || user?.userId || user?.user_id || "FAC001"}) • {profile?.designation ? `${profile.designation} • ` : ""}{profile?.department || selectedDept} • SVCET Campus
           </p>
         </div>
       </div>
@@ -730,31 +749,53 @@ function TeacherPortal({ user, initialTab }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px", marginTop: "12px" }}>
             <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>Full Name:</span>
-              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{user?.name || "Dr. S. Ramanathan"}</h4>
+              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{profile?.name || user?.name || "Faculty Member"}</h4>
             </div>
 
             <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>Faculty ID:</span>
-              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{user?.userId || user?.user_id || "FAC001"}</h4>
+              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{profile?.faculty_id || user?.faculty_id || user?.userId || user?.user_id || "FAC001"}</h4>
             </div>
 
             <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>Department:</span>
-              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{user?.department || "Computer Science Engineering"}</h4>
+              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{profile?.department || user?.department || selectedDept}</h4>
             </div>
 
             <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>Designation:</span>
-              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>Associate Professor / Senior Mentor</h4>
+              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{profile?.designation || user?.designation || "Assistant Professor"}</h4>
+            </div>
+
+            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              <span style={{ fontSize: "12px", color: "#64748b" }}>Official Email:</span>
+              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{profile?.email || user?.email || "-"}</h4>
+            </div>
+
+            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              <span style={{ fontSize: "12px", color: "#64748b" }}>Contact Phone:</span>
+              <h4 style={{ margin: "4px 0 0", color: "#1e293b" }}>{profile?.phone || user?.phone || "-"}</h4>
             </div>
           </div>
 
           <div style={{ marginTop: "24px", padding: "16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px" }}>
-            <h4 style={{ color: "#15803d", marginBottom: "8px" }}>📚 Academic Courses Handled (Current Semester)</h4>
+            <h4 style={{ color: "#15803d", marginBottom: "8px" }}>📚 Academic Courses Handled (Current Academic Year)</h4>
             <ul style={{ listStyle: "disc", paddingLeft: "20px", color: "#166534", fontSize: "13px", lineHeight: "1.8" }}>
-              <li><strong>CS3301</strong>: Data Structures & Distributed Algorithms (Semester 3 / 4)</li>
-              <li><strong>CS3452</strong>: Theory of Computation & Automata (Semester 4)</li>
-              <li><strong>CS3591</strong>: Computer Networks & Protocol Design (Semester 5)</li>
+              {profile?.subjects_handled && profile.subjects_handled.length > 0 ? (
+                profile.subjects_handled.map((sub, idx) => (
+                  <li key={idx}>
+                    <strong>{sub.subject_code}</strong>: {sub.subject_name} ({sub.department || profile.department})
+                  </li>
+                ))
+              ) : subjects && subjects.length > 0 ? (
+                subjects.slice(0, 4).map((sub) => (
+                  <li key={sub.subject_code}>
+                    <strong>{sub.subject_code}</strong>: {sub.subject_name} ({sub.department || profile?.department || selectedDept})
+                  </li>
+                ))
+              ) : (
+                <li>General Departmental Curriculum Handled</li>
+              )}
             </ul>
           </div>
         </div>

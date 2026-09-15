@@ -45,7 +45,9 @@ CREATE TABLE IF NOT EXISTS teachers (
     name VARCHAR(100) NOT NULL,
     department VARCHAR(100) NOT NULL,
     email VARCHAR(100),
-    designation VARCHAR(100)
+    phone VARCHAR(20) DEFAULT '',
+    designation VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 4. SUBJECTS TABLE (Academic Curriculum & Semester Courses)
@@ -127,6 +129,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS batch VARCHAR(20) DEFAULT '2024-2028'
 ALTER TABLE users ADD COLUMN IF NOT EXISTS year INT DEFAULT 1;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS semester INT DEFAULT 1;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS section VARCHAR(10) DEFAULT 'A';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS designation VARCHAR(100) DEFAULT '';
+
+-- Alter teachers
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT '';
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 -- Alter subjects
 ALTER TABLE subjects ADD COLUMN IF NOT EXISTS semester_id INT DEFAULT NULL;
@@ -137,6 +144,7 @@ ALTER TABLE subjects ADD COLUMN IF NOT EXISTS credits INT DEFAULT 3;
 -- -----------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_students_reg ON students(register_no);
 CREATE INDEX IF NOT EXISTS idx_users_uid ON users(user_id);
+CREATE INDEX IF NOT EXISTS idx_teachers_fac ON teachers(faculty_id);
 CREATE INDEX IF NOT EXISTS idx_att_reg ON attendance(register_no);
 CREATE INDEX IF NOT EXISTS idx_marks_reg ON marks(register_no);
 CREATE INDEX IF NOT EXISTS idx_fees_reg ON fees(register_no);

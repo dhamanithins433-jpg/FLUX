@@ -69,6 +69,39 @@ function AdminPortal({ user, initialTab }) {
     summary: null
   });
 
+  // Faculty Management State
+  const [facultySearch, setFacultySearch] = useState("");
+  const [facultyDept, setFacultyDept] = useState("All");
+  const [showAddFacultyModal, setShowAddFacultyModal] = useState(false);
+  const [showEditFacultyModal, setShowEditFacultyModal] = useState(false);
+  const [showResetFacultyPasswordModal, setShowResetFacultyPasswordModal] = useState(false);
+  const [showFacultyCsvModal, setShowFacultyCsvModal] = useState(false);
+  const [editingFaculty, setEditingFaculty] = useState(null);
+
+  const [facultyForm, setFacultyForm] = useState({
+    faculty_id: "",
+    name: "",
+    email: "",
+    phone: "",
+    department: "Computer Science Engineering",
+    designation: "Assistant Professor",
+    password: "Faculty@123"
+  });
+
+  const [resetFacultyPasswordForm, setResetFacultyPasswordForm] = useState({
+    faculty_id: "",
+    name: "",
+    new_password: "Faculty@123"
+  });
+
+  const [facultyCsvUploadState, setFacultyCsvUploadState] = useState({
+    mode: "file",
+    text: "",
+    file: null,
+    loading: false,
+    summary: null
+  });
+
   // Offline Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -123,7 +156,13 @@ function AdminPortal({ user, initialTab }) {
           if (r.ok) return r.json();
           return fetch(`${API_BASE}/students`).then((res) => res.json());
         }).catch(() => ({ students: [] })),
-        fetch(`${API_BASE}/teachers`, { headers }).then((r) => r.json()).catch(() => ({ teachers: [] })),
+        fetch(`${API_BASE}/admin/faculty`, { headers }).then(async (r) => {
+          if (r.ok) {
+            const data = await r.json();
+            return { teachers: data.faculty || [] };
+          }
+          return fetch(`${API_BASE}/teachers`).then((res) => res.json());
+        }).catch(() => ({ teachers: [] })),
         fetch(`${API_BASE}/study-materials`, { headers }).then((r) => r.json()).catch(() => ({ materials: [] })),
         fetch(`${API_BASE}/courses/cse/regulations`, { headers }).then((r) => r.json()).catch(() => ({ regulations: [] }))
       ]);
@@ -342,6 +381,202 @@ function AdminPortal({ user, initialTab }) {
       console.error(err);
       setCsvUploadState((prev) => ({ ...prev, loading: false }));
       alert("Failed to process CSV import.");
+    }
+  };
+
+  // ----------------- FACULTY CRUD HANDLERS -----------------
+  const handleOpenAddFaculty = () => {
+    setFacultyForm({
+      faculty_id: "",
+      name: "",
+      email: "",
+      phone: "",
+      department: "Computer Science Engineering",
+      designation: "Assistant Professor",
+      password: "Faculty@123"
+    });
+    setShowAddFacultyModal(true);
+  };
+
+  const handleAddFaculty = async (e) => {
+    e.preventDefault();
+    if (!facultyForm.faculty_id || !facultyForm.name || !facultyForm.email) {
+      alert("Please enter Faculty ID, Name, and Email.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/faculty`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify(facultyForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowAddFacultyModal(false);
+        setActionMessage(data.message || `Faculty ${facultyForm.name} added successfully!`);
+        setTimeout(() => setActionMessage(""), 5000);
+        fetchDashboardData();
+      } else {
+        alert(data.message || "Failed to add faculty member.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error adding faculty to database.");
+    }
+  };
+
+  const handleOpenEditFaculty = (f) => {
+    setEditingFaculty(f);
+    setFacultyForm({
+      faculty_id: f.faculty_id,
+      name: f.name,
+      email: f.email || "",
+      phone: f.phone || "",
+      department: f.department,
+      designation: f.designation || "Assistant Professor"
+    });
+    setShowEditFacultyModal(true);
+  };
+
+  const handleUpdateFaculty = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/admin/faculty/${facultyForm.faculty_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify(facultyForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowEditFacultyModal(false);
+        setActionMessage(data.message || `Faculty ${facultyForm.faculty_id} updated successfully!`);
+        setTimeout(() => setActionMessage(""), 5000);
+        fetchDashboardData();
+      } else {
+        alert(data.message || "Failed to update faculty profile.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating faculty profile.");
+    }
+  };
+
+  const handleDeleteFaculty = async (f) => {
+    if (!window.confirm(`Are you sure you want to permanently delete faculty member "${f.name}" (${f.faculty_id})?\n\nThis will remove their faculty profile and login credentials.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/admin/faculty/${f.faculty_id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setActionMessage(data.message || `Faculty ${f.faculty_id} permanently removed.`);
+        setTimeout(() => setActionMessage(""), 5000);
+        fetchDashboardData();
+      } else {
+        alert(data.message || "Failed to delete faculty member.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting faculty member.");
+    }
+  };
+
+  const handleOpenResetFacultyPassword = (f) => {
+    setResetFacultyPasswordForm({
+      faculty_id: f.faculty_id,
+      name: f.name,
+      new_password: ""
+    });
+    setShowResetFacultyPasswordModal(true);
+  };
+
+  const handleSaveResetFacultyPassword = async (e) => {
+    e.preventDefault();
+    if (!resetFacultyPasswordForm.new_password.trim()) {
+      alert("Please enter a new password");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/admin/faculty/${resetFacultyPasswordForm.faculty_id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ new_password: resetFacultyPasswordForm.new_password.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowResetFacultyPasswordModal(false);
+        setActionMessage(data.message || `Password for ${resetFacultyPasswordForm.faculty_id} reset successfully!`);
+        setTimeout(() => setActionMessage(""), 5000);
+      } else {
+        alert(data.message || "Failed to reset faculty password.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error resetting password.");
+    }
+  };
+
+  const handleDownloadFacultyTemplate = () => {
+    const csvContent =
+      "faculty_id,name,email,phone,department,designation,password\n" +
+      "FAC005,Dr. Ananth Kumar,ananth@svcet.edu.in,9876543220,Computer Science Engineering,Associate Professor,Faculty@123\n" +
+      "FAC006,Prof. Deepa Nair,deepa@svcet.edu.in,9876543221,Information Technology,Assistant Professor,Faculty@123\n" +
+      "FAC007,Dr. Vigneshwar R,vigneshwar@svcet.edu.in,9876543222,Electronics & Communication,Professor,Faculty@123\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "faculty_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFacultyCsvImport = async (e) => {
+    e.preventDefault();
+    setFacultyCsvUploadState((prev) => ({ ...prev, loading: true, summary: null }));
+    try {
+      let res;
+      if (facultyCsvUploadState.mode === "file") {
+        if (!facultyCsvUploadState.file) {
+          alert("Please select a .csv file from your computer");
+          setFacultyCsvUploadState((prev) => ({ ...prev, loading: false }));
+          return;
+        }
+        const formData = new FormData();
+        formData.append("file", facultyCsvUploadState.file);
+        res = await fetch(`${API_BASE}/admin/faculty/import-csv`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: formData
+        });
+      } else {
+        if (!facultyCsvUploadState.text.trim()) {
+          alert("Please paste valid CSV rows into the text area");
+          setFacultyCsvUploadState((prev) => ({ ...prev, loading: false }));
+          return;
+        }
+        res = await fetch(`${API_BASE}/admin/faculty/import-csv`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({ csv_content: facultyCsvUploadState.text })
+        });
+      }
+      const data = await res.json();
+      setFacultyCsvUploadState((prev) => ({ ...prev, loading: false, summary: data }));
+      if (res.ok && data.imported_count > 0) {
+        setActionMessage(`Bulk Import: Successfully enrolled ${data.imported_count} faculty members!`);
+        setTimeout(() => setActionMessage(""), 6000);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error(err);
+      setFacultyCsvUploadState((prev) => ({ ...prev, loading: false }));
+      alert("Failed to process faculty CSV import.");
     }
   };
 
@@ -566,6 +801,19 @@ function AdminPortal({ user, initialTab }) {
     return matchesSearch && matchesDept && matchesSem;
   });
 
+  const filteredTeachers = teachers.filter((t) => {
+    const q = facultySearch.toLowerCase();
+    const matchesSearch =
+      !facultySearch ||
+      t.name?.toLowerCase().includes(q) ||
+      t.faculty_id?.toLowerCase().includes(q) ||
+      t.email?.toLowerCase().includes(q) ||
+      t.designation?.toLowerCase().includes(q) ||
+      t.phone?.toLowerCase().includes(q);
+    const matchesDept = facultyDept === "All" || t.department === facultyDept;
+    return matchesSearch && matchesDept;
+  });
+
   const filteredMaterials = materialsList.filter((m) => {
     const matchesSearch =
       m.title?.toLowerCase().includes(materialSearchQuery.toLowerCase()) ||
@@ -662,7 +910,7 @@ function AdminPortal({ user, initialTab }) {
           className={activeTab === "teachers" ? "tab-btn active" : "tab-btn"}
           onClick={() => setActiveTab("teachers")}
         >
-          🏛️ Faculty Directory ({teachers.length})
+          🏛️ Faculty Directory & Management ({teachers.length})
         </button>
         <button
           className={activeTab === "fees" ? "tab-btn active" : "tab-btn"}
@@ -901,9 +1149,50 @@ function AdminPortal({ user, initialTab }) {
         </div>
       )}
 
-      {/* ================= TAB: FACULTY DIRECTORY ================= */}
+      {/* ================= TAB: FACULTY DIRECTORY & MANAGEMENT ================= */}
       {activeTab === "teachers" && (
         <div className="portal-card">
+          <div className="card-toolbar" style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", flex: 1 }}>
+              <div className="search-box" style={{ minWidth: "260px" }}>
+                <span>🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search by Faculty ID, Name, Email, or Designation..."
+                  value={facultySearch}
+                  onChange={(e) => setFacultySearch(e.target.value)}
+                />
+              </div>
+
+              <div className="filter-group">
+                <label>Department:</label>
+                <select value={facultyDept} onChange={(e) => setFacultyDept(e.target.value)}>
+                  <option value="All">All Departments</option>
+                  <option value="Computer Science Engineering">CSE</option>
+                  <option value="Information Technology">IT</option>
+                  <option value="Electronics & Communication">ECE</option>
+                  <option value="Electrical & Electronics">EEE</option>
+                  <option value="Mechanical Engineering">MECH</option>
+                  <option value="Civil Engineering">CIVIL</option>
+                  <option value="AI & Data Science">AI & DS</option>
+                  <option value="Basic Sciences & Humanities">BS&H</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button className="btn-primary" onClick={handleOpenAddFaculty}>
+                ➕ Add Faculty
+              </button>
+              <button className="btn-secondary" onClick={() => setShowFacultyCsvModal(true)}>
+                📁 Bulk Import CSV
+              </button>
+              <button className="btn-outline" onClick={handleDownloadFacultyTemplate} title="Download Faculty CSV Template">
+                📥 Sample CSV
+              </button>
+            </div>
+          </div>
+
           <div className="table-responsive">
             <table className="portal-table">
               <thead>
@@ -913,18 +1202,59 @@ function AdminPortal({ user, initialTab }) {
                   <th>Department</th>
                   <th>Designation</th>
                   <th>Official Email</th>
+                  <th>Contact Phone</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {teachers.map((t) => (
-                  <tr key={t.faculty_id}>
-                    <td><strong>{t.faculty_id}</strong></td>
-                    <td>{t.name}</td>
-                    <td><span className="dept-tag">{t.department}</span></td>
-                    <td>{t.designation}</td>
-                    <td>{t.email}</td>
+                {filteredTeachers.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "#64748b" }}>
+                      No faculty records found matching your filters.
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredTeachers.map((t) => (
+                    <tr key={t.faculty_id}>
+                      <td><strong>{t.faculty_id}</strong></td>
+                      <td>
+                        <strong>{t.name}</strong>
+                      </td>
+                      <td><span className="dept-tag">{t.department}</span></td>
+                      <td>{t.designation || "Assistant Professor"}</td>
+                      <td>{t.email}</td>
+                      <td>{t.phone || "-"}</td>
+                      <td>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            className="btn-sm btn-edit"
+                            onClick={() => handleOpenEditFaculty(t)}
+                            title="Edit Faculty Profile"
+                            style={{ background: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd", padding: "4px 8px", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            className="btn-sm btn-reset"
+                            onClick={() => handleOpenResetFacultyPassword(t)}
+                            title="Reset Login Password"
+                            style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", padding: "4px 8px", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                          >
+                            🔑 Pass
+                          </button>
+                          <button
+                            className="btn-sm btn-delete"
+                            onClick={() => handleDeleteFaculty(t)}
+                            title="Delete Faculty Member"
+                            style={{ background: "#fee2e2", color: "#b91c1c", border: "1px solid #fecaca", padding: "4px 8px", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -1540,6 +1870,339 @@ function AdminPortal({ user, initialTab }) {
                 </button>
                 <button type="submit" className="btn-primary" disabled={csvUploadState.loading}>
                   {csvUploadState.loading ? "Processing..." : "🚀 Process & Enroll Students"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ADD FACULTY ================= */}
+      {showAddFacultyModal && (
+        <div className="modal-overlay">
+          <div className="portal-modal" style={{ maxWidth: "600px" }}>
+            <div className="modal-header">
+              <h3>➕ Add New Faculty Member</h3>
+              <button className="modal-close-btn" onClick={() => setShowAddFacultyModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleAddFaculty}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div className="form-group">
+                  <label>Faculty ID * (Unique)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., FAC010"
+                    value={facultyForm.faculty_id}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, faculty_id: e.target.value.toUpperCase().trim() })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Full Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Dr. Rajesh Kumar"
+                    value={facultyForm.name}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, name: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div className="form-group">
+                  <label>Official Email *</label>
+                  <input
+                    type="email"
+                    placeholder="faculty@svcet.edu.in"
+                    value={facultyForm.email}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, email: e.target.value.trim() })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Contact Phone</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 9876543210"
+                    value={facultyForm.phone}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div className="form-group">
+                  <label>Department *</label>
+                  <select
+                    value={facultyForm.department}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, department: e.target.value })}
+                    required
+                  >
+                    <option value="Computer Science Engineering">Computer Science Engineering</option>
+                    <option value="Information Technology">Information Technology</option>
+                    <option value="Electronics & Communication">Electronics & Communication</option>
+                    <option value="Electrical & Electronics">Electrical & Electronics</option>
+                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                    <option value="Civil Engineering">Civil Engineering</option>
+                    <option value="AI & Data Science">AI & Data Science</option>
+                    <option value="Basic Sciences & Humanities">Basic Sciences & Humanities</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Designation *</label>
+                  <select
+                    value={facultyForm.designation}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, designation: e.target.value })}
+                    required
+                  >
+                    <option value="Assistant Professor">Assistant Professor</option>
+                    <option value="Associate Professor">Associate Professor</option>
+                    <option value="Professor">Professor</option>
+                    <option value="Head of Department">Head of Department</option>
+                    <option value="Dean">Dean</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Initial Login Password *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Faculty@123"
+                  value={facultyForm.password}
+                  onChange={(e) => setFacultyForm({ ...facultyForm, password: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="modal-form-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowAddFacultyModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  ✓ Add Faculty & Create Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT FACULTY ================= */}
+      {showEditFacultyModal && (
+        <div className="modal-overlay">
+          <div className="portal-modal" style={{ maxWidth: "600px" }}>
+            <div className="modal-header">
+              <h3>✏️ Edit Faculty Member ({facultyForm.faculty_id})</h3>
+              <button className="modal-close-btn" onClick={() => setShowEditFacultyModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleUpdateFaculty}>
+              <div className="form-group">
+                <label>Full Name *</label>
+                <input
+                  type="text"
+                  value={facultyForm.name}
+                  onChange={(e) => setFacultyForm({ ...facultyForm, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div className="form-group">
+                  <label>Official Email *</label>
+                  <input
+                    type="email"
+                    value={facultyForm.email}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, email: e.target.value.trim() })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Contact Phone</label>
+                  <input
+                    type="text"
+                    value={facultyForm.phone}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div className="form-group">
+                  <label>Department *</label>
+                  <select
+                    value={facultyForm.department}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, department: e.target.value })}
+                    required
+                  >
+                    <option value="Computer Science Engineering">Computer Science Engineering</option>
+                    <option value="Information Technology">Information Technology</option>
+                    <option value="Electronics & Communication">Electronics & Communication</option>
+                    <option value="Electrical & Electronics">Electrical & Electronics</option>
+                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                    <option value="Civil Engineering">Civil Engineering</option>
+                    <option value="AI & Data Science">AI & Data Science</option>
+                    <option value="Basic Sciences & Humanities">Basic Sciences & Humanities</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Designation *</label>
+                  <select
+                    value={facultyForm.designation}
+                    onChange={(e) => setFacultyForm({ ...facultyForm, designation: e.target.value })}
+                    required
+                  >
+                    <option value="Assistant Professor">Assistant Professor</option>
+                    <option value="Associate Professor">Associate Professor</option>
+                    <option value="Professor">Professor</option>
+                    <option value="Head of Department">Head of Department</option>
+                    <option value="Dean">Dean</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-form-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowEditFacultyModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  ✓ Update Faculty Record
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: RESET FACULTY PASSWORD ================= */}
+      {showResetFacultyPasswordModal && (
+        <div className="modal-overlay">
+          <div className="portal-modal" style={{ maxWidth: "450px" }}>
+            <div className="modal-header">
+              <h3>🔑 Reset Faculty Password</h3>
+              <button className="modal-close-btn" onClick={() => setShowResetFacultyPasswordModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleSaveResetFacultyPassword}>
+              <p style={{ fontSize: "14px", color: "#475569", marginBottom: "16px" }}>
+                Resetting password for: <strong>{resetFacultyPasswordForm.name}</strong> ({resetFacultyPasswordForm.faculty_id})
+              </p>
+
+              <div className="form-group">
+                <label>New Password *</label>
+                <input
+                  type="text"
+                  placeholder="Enter new password"
+                  value={resetFacultyPasswordForm.new_password}
+                  onChange={(e) => setResetFacultyPasswordForm({ ...resetFacultyPasswordForm, new_password: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="modal-form-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowResetFacultyPasswordModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  ✓ Update Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: FACULTY CSV BULK IMPORT ================= */}
+      {showFacultyCsvModal && (
+        <div className="modal-overlay">
+          <div className="portal-modal" style={{ maxWidth: "700px" }}>
+            <div className="modal-header">
+              <h3>📁 Bulk Import Faculty via CSV</h3>
+              <button className="modal-close-btn" onClick={() => setShowFacultyCsvModal(false)}>✕</button>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
+              <button
+                type="button"
+                className={facultyCsvUploadState.mode === "file" ? "btn-sm btn-primary" : "btn-sm btn-secondary"}
+                onClick={() => setFacultyCsvUploadState({ ...facultyCsvUploadState, mode: "file" })}
+              >
+                📎 Upload CSV File
+              </button>
+              <button
+                type="button"
+                className={facultyCsvUploadState.mode === "text" ? "btn-sm btn-primary" : "btn-sm btn-secondary"}
+                onClick={() => setFacultyCsvUploadState({ ...facultyCsvUploadState, mode: "text" })}
+              >
+                ✍️ Paste CSV Text
+              </button>
+              <button
+                type="button"
+                className="btn-sm btn-outline"
+                style={{ marginLeft: "auto" }}
+                onClick={handleDownloadFacultyTemplate}
+              >
+                📥 Download Template CSV
+              </button>
+            </div>
+
+            <form onSubmit={handleFacultyCsvImport}>
+              {facultyCsvUploadState.mode === "file" ? (
+                <div className="form-group">
+                  <label>Select .CSV File to Upload *</label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setFacultyCsvUploadState({ ...facultyCsvUploadState, file: e.target.files[0] })}
+                    required
+                  />
+                  <small style={{ color: "#64748b", marginTop: "6px", display: "block" }}>
+                    Standard CSV Columns: <code>faculty_id,name,email,phone,department,designation,password</code>
+                  </small>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label>Paste CSV Data with Header *</label>
+                  <textarea
+                    rows={8}
+                    placeholder={"faculty_id,name,email,phone,department,designation,password\nFAC005,Dr. Ananth Kumar,ananth@svcet.edu.in,9876543220,Computer Science Engineering,Associate Professor,Faculty@123"}
+                    value={facultyCsvUploadState.text}
+                    onChange={(e) => setFacultyCsvUploadState({ ...facultyCsvUploadState, text: e.target.value })}
+                    style={{ fontFamily: "monospace", fontSize: "12px" }}
+                    required
+                  />
+                </div>
+              )}
+
+              {facultyCsvUploadState.summary && (
+                <div style={{ marginTop: "16px", padding: "14px", borderRadius: "8px", background: facultyCsvUploadState.summary.imported_count > 0 ? "#ecfdf5" : "#fef2f2", border: `1px solid ${facultyCsvUploadState.summary.imported_count > 0 ? "#a7f3d0" : "#fca5a5"}` }}>
+                  <h4 style={{ color: facultyCsvUploadState.summary.imported_count > 0 ? "#065f46" : "#991b1b", marginBottom: "8px" }}>
+                    Faculty Import Results Summary
+                  </h4>
+                  <p style={{ fontSize: "13px", margin: "4px 0" }}>
+                    ✓ <strong>{facultyCsvUploadState.summary.imported_count || 0}</strong> faculty members successfully added and accounts created.
+                  </p>
+                  {facultyCsvUploadState.summary.failed_count > 0 && (
+                    <div>
+                      <p style={{ fontSize: "13px", color: "#b91c1c", margin: "4px 0" }}>
+                        ⚠ <strong>{facultyCsvUploadState.summary.failed_count}</strong> rows skipped or failed:
+                      </p>
+                      <ul style={{ maxHeight: "120px", overflowY: "auto", fontSize: "12px", color: "#b91c1c", paddingLeft: "20px" }}>
+                        {facultyCsvUploadState.summary.errors?.map((err, i) => (
+                          <li key={i}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="modal-form-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowFacultyCsvModal(false)}>
+                  Close
+                </button>
+                <button type="submit" className="btn-primary" disabled={facultyCsvUploadState.loading}>
+                  {facultyCsvUploadState.loading ? "Processing..." : "🚀 Process & Enroll Faculty"}
                 </button>
               </div>
             </form>

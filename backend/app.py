@@ -27,9 +27,11 @@ def create_token(user):
         'id': user['id'],
         'user_id': user['user_id'],
         'register_no': user['user_id'],
+        'faculty_id': user.get('faculty_id') or user['user_id'],
         'name': user['name'],
         'role': user['role'],
         'department': user.get('department', ''),
+        'designation': user.get('designation', ''),
         'year': user.get('year', 1),
         'semester': user.get('semester', 1),
         'section': user.get('section', 'A'),
@@ -183,31 +185,40 @@ def login():
         if not user or not check_password_hash(user['password_hash'], password):
             return jsonify({'message': 'Invalid credentials. Please check your ID and Password.'}), 401
 
-        # Fetch student table fields if role is student
+        # Fetch student or teacher record depending on role
         student_rec = None
+        teacher_rec = None
         if user['role'] == 'student':
             student_rec = db.execute_query("SELECT * FROM students WHERE register_no = ?", (user['user_id'],), fetch_one=True)
+        elif user['role'] == 'faculty':
+            teacher_rec = db.execute_query("SELECT * FROM teachers WHERE faculty_id = ?", (user['user_id'],), fetch_one=True)
 
         user_for_token = dict(user)
         if student_rec:
             for k in ('year', 'semester', 'section', 'batch', 'phone'):
                 if student_rec.get(k) is not None:
                     user_for_token[k] = student_rec[k]
+        elif teacher_rec:
+            for k in ('designation', 'phone', 'department'):
+                if teacher_rec.get(k) is not None:
+                    user_for_token[k] = teacher_rec[k]
 
         token = create_token(user_for_token)
         user_info = {
             'id': user['id'],
-            'name': user['name'],
+            'name': (teacher_rec and teacher_rec.get('name')) or user['name'],
             'userId': user['user_id'],
             'register_no': user['user_id'],
-            'email': user['email'],
+            'faculty_id': user['user_id'],
+            'email': (teacher_rec and teacher_rec.get('email')) or user['email'],
             'role': user['role'],
-            'department': user.get('department', ''),
+            'department': (teacher_rec and teacher_rec.get('department')) or user.get('department', ''),
+            'designation': (teacher_rec and teacher_rec.get('designation')) or user.get('designation', 'Faculty Member'),
             'year': (student_rec and student_rec.get('year')) or user.get('year', 1),
             'semester': (student_rec and student_rec.get('semester')) or user.get('semester', 1),
             'section': (student_rec and student_rec.get('section')) or user.get('section', 'A'),
             'batch': (student_rec and student_rec.get('batch')) or user.get('batch', '2024-2028'),
-            'phone': (student_rec and student_rec.get('phone')) or user.get('phone', '')
+            'phone': (teacher_rec and teacher_rec.get('phone')) or (student_rec and student_rec.get('phone')) or user.get('phone', '')
         }
         return jsonify({
             'message': 'Login successful',
@@ -1215,6 +1226,301 @@ def download_csv_template():
         'Content-Type': 'text/csv',
         'Content-Disposition': 'attachment; filename="students_template.csv"'
     })
+
+# ----------------- ADMIN FACULTY MANAGEMENT ENDPOINTS -----------------
+
+@app.route('/api/admin/faculty', methods=['GET'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_get_faculty(current_user):
+    search = request.args.get('search', '').strip()
+    dept = request.args.get('department', '').strip()
+
+    query = """
+        SELECT t.*, u.phone as user_phone, u.email as user_email, u.designation as user_designation
+        FROM teachers t
+        LEFT JOIN users u ON t.faculty_id = u.user_id
+        WHERE 1=1
+    """
+    params = []
+    if search:
+        query += " AND (t.faculty_id LIKE ? OR t.name LIKE ? OR t.email LIKE ? OR t.designation LIKE ?)"
+        wild = f"%{search}%"
+        params.extend([wild, wild, wild, wild])
+    if dept and dept != 'All':
+        query += " AND t.department = ?"
+        params.append(dept)
+
+    query += " ORDER BY t.faculty_id ASC"
+    faculty_list = db.execute_query(query, params, fetch_all=True) or []
+    for f in faculty_list:
+        if not f.get('phone') and f.get('user_phone'):
+            f['phone'] = f['user_phone']
+        if not f.get('email') and f.get('user_email'):
+            f['email'] = f['user_email']
+        if not f.get('designation') and f.get('user_designation'):
+            f['designation'] = f['user_designation']
+
+    return jsonify({'faculty': faculty_list, 'total': len(faculty_list)}), 200
+
+@app.route('/api/admin/faculty', methods=['POST'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_create_faculty(current_user):
+    try:
+        data = request.get_json() or {}
+        faculty_id = data.get('faculty_id', '').strip().upper()
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        phone = data.get('phone', '').strip()
+        dept = data.get('department', 'Computer Science Engineering').strip()
+        designation = data.get('designation', 'Assistant Professor').strip() or 'Assistant Professor'
+        password = data.get('password', 'faculty123').strip() or 'faculty123'
+
+        if not faculty_id or not name or not email:
+            return jsonify({'message': 'Faculty ID, Full Name, and Email are required.'}), 400
+
+        existing_id = db.execute_query(
+            "SELECT id FROM users WHERE user_id = ? UNION SELECT id FROM teachers WHERE faculty_id = ?",
+            (faculty_id, faculty_id), fetch_one=True
+        )
+        if existing_id:
+            return jsonify({'message': f"Faculty with ID '{faculty_id}' already exists"}), 409
+
+        existing_email = db.execute_query(
+            "SELECT id FROM users WHERE email = ? UNION SELECT id FROM teachers WHERE email = ?",
+            (email, email), fetch_one=True
+        )
+        if existing_email:
+            return jsonify({'message': f"Account with email '{email}' already registered"}), 409
+
+        pw_hash = generate_password_hash(password)
+
+        db.execute_query(
+            """
+            INSERT INTO users (name, user_id, email, password_hash, role, department, phone, designation)
+            VALUES (?, ?, ?, ?, 'faculty', ?, ?, ?)
+            """,
+            (name, faculty_id, email, pw_hash, dept, phone, designation),
+            commit=True
+        )
+
+        db.execute_query(
+            """
+            INSERT INTO teachers (faculty_id, name, department, email, designation, phone)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (faculty_id, name, dept, email, designation, phone),
+            commit=True
+        )
+
+        new_faculty = db.execute_query("SELECT * FROM teachers WHERE faculty_id = ?", (faculty_id,), fetch_one=True)
+        return jsonify({
+            'message': f"Faculty {name} ({faculty_id}) enrolled successfully.",
+            'faculty': new_faculty
+        }), 201
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/faculty/<faculty_id>', methods=['PUT'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_update_faculty(current_user, faculty_id):
+    try:
+        data = request.get_json() or {}
+        faculty = db.execute_query("SELECT * FROM teachers WHERE faculty_id = ?", (faculty_id,), fetch_one=True)
+        if not faculty:
+            return jsonify({'message': f"Faculty member '{faculty_id}' not found"}), 404
+
+        name = data.get('name', faculty['name']).strip()
+        dept = data.get('department', faculty['department']).strip()
+        email = data.get('email', faculty.get('email', '')).strip()
+        phone = data.get('phone', faculty.get('phone', '')).strip()
+        designation = data.get('designation', faculty.get('designation', 'Assistant Professor')).strip()
+
+        db.execute_query(
+            """
+            UPDATE teachers 
+            SET name = ?, department = ?, email = ?, phone = ?, designation = ?
+            WHERE faculty_id = ?
+            """,
+            (name, dept, email, phone, designation, faculty_id),
+            commit=True
+        )
+
+        db.execute_query(
+            """
+            UPDATE users 
+            SET name = ?, department = ?, email = ?, phone = ?, designation = ?
+            WHERE user_id = ?
+            """,
+            (name, dept, email, phone, designation, faculty_id),
+            commit=True
+        )
+
+        updated = db.execute_query("SELECT * FROM teachers WHERE faculty_id = ?", (faculty_id,), fetch_one=True)
+        return jsonify({'message': f"Faculty {faculty_id} updated successfully", 'faculty': updated}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/faculty/<faculty_id>', methods=['DELETE'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_delete_faculty(current_user, faculty_id):
+    try:
+        faculty = db.execute_query("SELECT * FROM teachers WHERE faculty_id = ?", (faculty_id,), fetch_one=True)
+        if not faculty:
+            return jsonify({'message': f"Faculty member '{faculty_id}' not found"}), 404
+
+        db.execute_query("DELETE FROM teachers WHERE faculty_id = ?", (faculty_id,), commit=True)
+        db.execute_query("DELETE FROM users WHERE user_id = ?", (faculty_id,), commit=True)
+
+        return jsonify({'message': f"Faculty member '{faculty_id}' permanently removed."}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/faculty/<faculty_id>/reset-password', methods=['POST'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_reset_faculty_password(current_user, faculty_id):
+    try:
+        data = request.get_json() or {}
+        new_password = data.get('new_password', 'faculty123').strip() or 'faculty123'
+        user = db.execute_query("SELECT id FROM users WHERE user_id = ?", (faculty_id,), fetch_one=True)
+        if not user:
+            return jsonify({'message': f"User account for '{faculty_id}' not found"}), 404
+
+        pw_hash = generate_password_hash(new_password)
+        db.execute_query("UPDATE users SET password_hash = ? WHERE user_id = ?", (pw_hash, faculty_id), commit=True)
+
+        return jsonify({'message': f"Password for '{faculty_id}' successfully reset."}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/faculty/import-csv', methods=['POST'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_import_faculty_csv(current_user):
+    try:
+        csv_text = ""
+        if 'file' in request.files:
+            file = request.files['file']
+            csv_text = file.read().decode('utf-8', errors='ignore')
+        else:
+            data = request.get_json() or {}
+            csv_text = data.get('csv_content', '')
+
+        if not csv_text.strip():
+            return jsonify({'message': 'No CSV content provided'}), 400
+
+        reader = csv.DictReader(io.StringIO(csv_text.strip()))
+        imported = []
+        errors = []
+
+        for row_idx, row in enumerate(reader, start=2):
+            clean_row = {k.strip().lower(): v.strip() for k, v in row.items() if k}
+            faculty_id = clean_row.get('faculty_id') or clean_row.get('fac_id') or clean_row.get('userid')
+            name = clean_row.get('name') or clean_row.get('faculty_name')
+            email = clean_row.get('email') or (f"{faculty_id.lower()}@svcet.edu.in" if faculty_id else None)
+            phone = clean_row.get('phone') or clean_row.get('mobile') or ''
+            dept = clean_row.get('department') or clean_row.get('dept') or 'Computer Science Engineering'
+            designation = clean_row.get('designation') or clean_row.get('role') or 'Assistant Professor'
+            password = clean_row.get('password', 'faculty123') or 'faculty123'
+
+            if not faculty_id or not name:
+                errors.append(f"Row {row_idx}: Missing faculty_id or name")
+                continue
+
+            existing = db.execute_query(
+                "SELECT id FROM users WHERE user_id = ? UNION SELECT id FROM teachers WHERE faculty_id = ?",
+                (faculty_id, faculty_id), fetch_one=True
+            )
+            if existing:
+                errors.append(f"Row {row_idx}: Faculty ID '{faculty_id}' already exists in database (Skipped)")
+                continue
+
+            pw_hash = generate_password_hash(password)
+            try:
+                db.execute_query(
+                    """
+                    INSERT INTO users (name, user_id, email, password_hash, role, department, phone, designation)
+                    VALUES (?, ?, ?, ?, 'faculty', ?, ?, ?)
+                    """,
+                    (name, faculty_id, email, pw_hash, dept, phone, designation),
+                    commit=True
+                )
+                db.execute_query(
+                    """
+                    INSERT INTO teachers (faculty_id, name, department, email, designation, phone)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (faculty_id, name, dept, email, designation, phone),
+                    commit=True
+                )
+                imported.append(faculty_id)
+            except Exception as row_err:
+                errors.append(f"Row {row_idx} ({faculty_id}): {str(row_err)}")
+
+        return jsonify({
+            'message': f"Faculty CSV Import complete: {len(imported)} faculty member(s) enrolled, {len(errors)} issues.",
+            'imported_count': len(imported),
+            'failed_count': len(errors),
+            'imported_faculty': imported,
+            'errors': errors
+        }), 200
+    except Exception as e:
+        return jsonify({'message': f"CSV parsing error: {str(e)}"}), 500
+
+@app.route('/api/admin/faculty/csv-template', methods=['GET'])
+def download_faculty_csv_template():
+    template_path = BASE_DIR / 'faculty_template.csv'
+    if template_path.exists():
+        with open(template_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    else:
+        content = "faculty_id,name,email,phone,department,designation,password\nFAC001,Dr. Ramanathan K,ramanathan@svcet.edu.in,9876543220,Computer Science Engineering,Professor & HOD,faculty123\n"
+    return (content, 200, {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="faculty_template.csv"'
+    })
+
+# ----------------- FACULTY SELF-SERVICE & PROFILE ENDPOINTS -----------------
+
+@app.route('/api/faculty/profile', methods=['GET'])
+@token_required(allowed_roles=['faculty', 'college', 'admin'])
+def get_faculty_profile(current_user):
+    target_id = current_user['user_id']
+    if current_user['role'] in ('college', 'admin') and request.args.get('faculty_id'):
+        target_id = request.args.get('faculty_id').strip()
+
+    teacher = db.execute_query(
+        "SELECT * FROM teachers WHERE faculty_id = ?",
+        (target_id,), fetch_one=True
+    )
+    user_rec = db.execute_query(
+        "SELECT email, phone, role, created_at, designation, department FROM users WHERE user_id = ?",
+        (target_id,), fetch_one=True
+    )
+    if not teacher and not user_rec:
+        return jsonify({'message': 'Faculty profile not found in database'}), 404
+
+    dept = (teacher and teacher.get('department')) or current_user.get('department', '')
+    handled_subjects = db.execute_query(
+        """
+        SELECT DISTINCT s.subject_code, s.subject_name, s.department, s.semester 
+        FROM subjects s
+        WHERE s.department = ?
+        ORDER BY s.subject_code ASC
+        """,
+        (dept,),
+        fetch_all=True
+    ) or []
+
+    profile = {
+        'faculty_id': target_id,
+        'name': (teacher and teacher.get('name')) or current_user.get('name', ''),
+        'email': (teacher and teacher.get('email')) or (user_rec and user_rec.get('email')) or '',
+        'phone': (teacher and teacher.get('phone')) or (user_rec and user_rec.get('phone')) or '',
+        'department': dept,
+        'designation': (teacher and teacher.get('designation')) or (user_rec and user_rec.get('designation')) or 'Assistant Professor',
+        'created_at': (teacher and teacher.get('created_at')) or (user_rec and user_rec.get('created_at')) or '',
+        'subjects_handled': handled_subjects
+    }
+    return jsonify({'profile': profile}), 200
 
 # ----------------- FACULTY ATTENDANCE & MARKS ENDPOINTS -----------------
 
