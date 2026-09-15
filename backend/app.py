@@ -2,6 +2,9 @@ import os
 import uuid
 import datetime
 import jwt
+import csv
+import io
+from functools import wraps
 from pathlib import Path
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -23,12 +26,75 @@ def create_token(user):
     payload = {
         'id': user['id'],
         'user_id': user['user_id'],
+        'register_no': user['user_id'],
         'name': user['name'],
         'role': user['role'],
         'department': user.get('department', ''),
+        'year': user.get('year', 1),
+        'semester': user.get('semester', 1),
+        'section': user.get('section', 'A'),
+        'batch': user.get('batch', '2024-2028'),
+        'phone': user.get('phone', ''),
         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+def token_required(allowed_roles=None):
+    """
+    Role-based authentication decorator.
+    Verifies JWT token from Authorization: Bearer <token> or query param.
+    Injects decoded user payload as the first argument to the route handler.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            auth_header = request.headers.get('Authorization', '')
+            token = None
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+            elif request.args.get('token'):
+                token = request.args.get('token')
+
+            if not token:
+                return jsonify({'message': 'Authentication token is required'}), 401
+
+            try:
+                current_user = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+            except jwt.ExpiredSignatureError:
+                return jsonify({'message': 'Session expired. Please log in again.'}), 401
+            except Exception:
+                return jsonify({'message': 'Invalid authentication token'}), 401
+
+            if allowed_roles:
+                user_role = current_user.get('role', '').lower()
+                matched = False
+                for role in allowed_roles:
+                    r = role.lower()
+                    if r == user_role or (r in ('admin', 'college') and user_role in ('admin', 'college')):
+                        matched = True
+                        break
+                if not matched:
+                    return jsonify({'message': f"Access forbidden: User role '{user_role}' cannot access this resource."}), 403
+
+            return f(current_user, *args, **kwargs)
+        return decorated
+    return decorator
+
+def get_optional_auth_user():
+    """Helper to extract user token if present without forcing 401 (for legacy routes)"""
+    auth_header = request.headers.get('Authorization', '')
+    token = None
+    if auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    elif request.args.get('token'):
+        token = request.args.get('token')
+
+    if not token:
+        return None
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+    except Exception:
+        return None
 
 def calculate_grade(marks_obtained, max_marks=100):
     try:
@@ -117,14 +183,31 @@ def login():
         if not user or not check_password_hash(user['password_hash'], password):
             return jsonify({'message': 'Invalid credentials. Please check your ID and Password.'}), 401
 
-        token = create_token(user)
+        # Fetch student table fields if role is student
+        student_rec = None
+        if user['role'] == 'student':
+            student_rec = db.execute_query("SELECT * FROM students WHERE register_no = ?", (user['user_id'],), fetch_one=True)
+
+        user_for_token = dict(user)
+        if student_rec:
+            for k in ('year', 'semester', 'section', 'batch', 'phone'):
+                if student_rec.get(k) is not None:
+                    user_for_token[k] = student_rec[k]
+
+        token = create_token(user_for_token)
         user_info = {
             'id': user['id'],
             'name': user['name'],
             'userId': user['user_id'],
+            'register_no': user['user_id'],
             'email': user['email'],
             'role': user['role'],
-            'department': user.get('department', '')
+            'department': user.get('department', ''),
+            'year': (student_rec and student_rec.get('year')) or user.get('year', 1),
+            'semester': (student_rec and student_rec.get('semester')) or user.get('semester', 1),
+            'section': (student_rec and student_rec.get('section')) or user.get('section', 'A'),
+            'batch': (student_rec and student_rec.get('batch')) or user.get('batch', '2024-2028'),
+            'phone': (student_rec and student_rec.get('phone')) or user.get('phone', '')
         }
         return jsonify({
             'message': 'Login successful',
@@ -180,6 +263,174 @@ def get_subjects():
     query += " ORDER BY subject_code ASC"
     subjects = db.execute_query(query, params, fetch_all=True)
     return jsonify({'subjects': subjects}), 200
+
+# ----------------- SECURE STUDENT DATA ISOLATION ENDPOINTS -----------------
+
+@app.route('/api/student/profile', methods=['GET'])
+@token_required(allowed_roles=['student', 'college', 'admin', 'faculty'])
+def get_student_profile(current_user):
+    target_reg = current_user['user_id']
+    if current_user['role'] in ('college', 'admin', 'faculty') and request.args.get('register_no'):
+        target_reg = request.args.get('register_no').strip()
+
+    student = db.execute_query(
+        "SELECT * FROM students WHERE register_no = ?",
+        (target_reg,), fetch_one=True
+    )
+    user_rec = db.execute_query(
+        "SELECT email, phone, role, created_at, year, semester, section, batch FROM users WHERE user_id = ?",
+        (target_reg,), fetch_one=True
+    )
+    if not student and not user_rec:
+        return jsonify({'message': 'Student profile not found in database'}), 404
+
+    profile = {
+        'register_no': target_reg,
+        'name': (student and student.get('name')) or current_user.get('name', ''),
+        'email': (student and student.get('email')) or (user_rec and user_rec.get('email')) or '',
+        'phone': (student and student.get('phone')) or (user_rec and user_rec.get('phone')) or '',
+        'department': (student and student.get('department')) or current_user.get('department', ''),
+        'year': (student and student.get('year')) or (user_rec and user_rec.get('year')) or 1,
+        'semester': (student and student.get('semester')) or (user_rec and user_rec.get('semester')) or 1,
+        'section': (student and student.get('section')) or (user_rec and user_rec.get('section')) or 'A',
+        'batch': (student and student.get('batch')) or (user_rec and user_rec.get('batch')) or '2024-2028',
+        'created_at': (student and student.get('created_at')) or (user_rec and user_rec.get('created_at')) or ''
+    }
+    return jsonify({'profile': profile}), 200
+
+@app.route('/api/student/attendance', methods=['GET'])
+@token_required(allowed_roles=['student'])
+def get_auth_student_attendance(current_user):
+    reg_no = current_user['user_id']
+    records = db.execute_query(
+        """
+        SELECT a.*, s.subject_name 
+        FROM attendance a 
+        LEFT JOIN subjects s ON a.subject_code = s.subject_code 
+        WHERE a.register_no = ? 
+        ORDER BY a.date DESC
+        """,
+        (reg_no,), fetch_all=True
+    ) or []
+    total = len(records)
+    if total == 0:
+        return jsonify({
+            'register_no': reg_no,
+            'total_classes': 0,
+            'present': 0,
+            'absent': 0,
+            'late': 0,
+            'percentage': None,
+            'records': []
+        }), 200
+
+    present = sum(1 for r in records if r['status'] == 'Present')
+    late = sum(1 for r in records if r['status'] == 'Late')
+    absent = sum(1 for r in records if r['status'] == 'Absent')
+    effective_present = present + (late * 0.5)
+    pct = round((effective_present / total) * 100, 1)
+
+    return jsonify({
+        'register_no': reg_no,
+        'total_classes': total,
+        'present': present,
+        'absent': absent,
+        'late': late,
+        'percentage': pct,
+        'records': records
+    }), 200
+
+@app.route('/api/student/marks', methods=['GET'])
+@token_required(allowed_roles=['student'])
+def get_auth_student_marks(current_user):
+    reg_no = current_user['user_id']
+    records = db.execute_query(
+        """
+        SELECT m.*, s.subject_name
+        FROM marks m
+        LEFT JOIN subjects s ON m.subject_code = s.subject_code
+        WHERE m.register_no = ?
+        ORDER BY m.subject_code, m.exam_type
+        """,
+        (reg_no,), fetch_all=True
+    ) or []
+
+    if not records:
+        return jsonify({
+            'register_no': reg_no,
+            'records': [],
+            'grouped': {},
+            'average_percentage': None
+        }), 200
+
+    grouped = {}
+    for r in records:
+        e = r['exam_type']
+        if e not in grouped:
+            grouped[e] = []
+        grouped[e].append(r)
+
+    total_score = sum(r['marks_obtained'] for r in records)
+    total_max = sum(r['max_marks'] for r in records)
+    avg_pct = round((total_score / total_max) * 100, 1) if total_max > 0 else None
+
+    return jsonify({
+        'register_no': reg_no,
+        'records': records,
+        'grouped': grouped,
+        'average_percentage': avg_pct
+    }), 200
+
+@app.route('/api/student/fees', methods=['GET'])
+@token_required(allowed_roles=['student'])
+def get_auth_student_fees(current_user):
+    reg_no = current_user['user_id']
+    student = db.execute_query(
+        "SELECT * FROM students WHERE register_no = ?",
+        (reg_no,), fetch_one=True
+    )
+    fee = db.execute_query(
+        """
+        SELECT
+            tuition_fee, exam_fee, transport_fee, hostel_fee, other_fee,
+            (tuition_fee + exam_fee + transport_fee + hostel_fee + other_fee) AS total_fee,
+            paid_amount,
+            (tuition_fee + exam_fee + transport_fee + hostel_fee + other_fee - paid_amount) AS balance
+        FROM fees
+        WHERE register_no = ?
+        """,
+        (reg_no,), fetch_one=True
+    )
+    transactions = db.execute_query(
+        "SELECT * FROM payments WHERE register_no = ? ORDER BY paid_at DESC",
+        (reg_no,), fetch_all=True
+    ) or []
+
+    return jsonify({
+        'student': student,
+        'fee': fee,
+        'transactions': transactions
+    }), 200
+
+@app.route('/api/student/courses', methods=['GET'])
+@token_required(allowed_roles=['student', 'college', 'admin', 'faculty'])
+def get_auth_student_courses(current_user):
+    reg_no = current_user['user_id']
+    student = db.execute_query("SELECT * FROM students WHERE register_no = ?", (reg_no,), fetch_one=True)
+    dept = (student and student.get('department')) or current_user.get('department') or 'Computer Science Engineering'
+    sem = (student and student.get('semester')) or current_user.get('semester') or 3
+
+    subjects = db.execute_query(
+        "SELECT * FROM subjects WHERE (department LIKE ? OR department = ?) AND (semester = ? OR ? IS NULL) ORDER BY subject_code ASC",
+        (f"%{dept}%", dept, sem, None),
+        fetch_all=True
+    ) or []
+
+    return jsonify({
+        'department': dept,
+        'semester': sem,
+        'subjects': subjects
+    }), 200
 
 # ----------------- ATTENDANCE ENDPOINTS -----------------
 
@@ -257,16 +508,31 @@ def save_batch_attendance():
 
 @app.route('/api/attendance/student/<reg_no>', methods=['GET'])
 def get_student_attendance(reg_no):
+    caller = get_optional_auth_user()
+    if caller and caller.get('role') == 'student' and caller.get('user_id') != reg_no:
+        return jsonify({'message': "Access forbidden: You cannot view another student's attendance records"}), 403
+
     records = db.execute_query(
         "SELECT a.*, s.subject_name FROM attendance a LEFT JOIN subjects s ON a.subject_code = s.subject_code WHERE a.register_no = ? ORDER BY a.date DESC",
         (reg_no,), fetch_all=True
-    )
+    ) or []
     total = len(records)
+    if total == 0:
+        return jsonify({
+            'register_no': reg_no,
+            'total_classes': 0,
+            'present': 0,
+            'absent': 0,
+            'late': 0,
+            'percentage': None,
+            'records': []
+        }), 200
+
     present = sum(1 for r in records if r['status'] == 'Present')
     late = sum(1 for r in records if r['status'] == 'Late')
     absent = sum(1 for r in records if r['status'] == 'Absent')
     effective_present = present + (late * 0.5)
-    pct = round((effective_present / total) * 100, 1) if total > 0 else 100.0
+    pct = round((effective_present / total) * 100, 1)
 
     return jsonify({
         'register_no': reg_no,
@@ -359,6 +625,10 @@ def save_batch_marks():
 
 @app.route('/api/marks/student/<reg_no>', methods=['GET'])
 def get_student_marks(reg_no):
+    caller = get_optional_auth_user()
+    if caller and caller.get('role') == 'student' and caller.get('user_id') != reg_no:
+        return jsonify({'message': "Access forbidden: You cannot view another student's marks records"}), 403
+
     records = db.execute_query(
         """
         SELECT m.*, s.subject_name
@@ -368,7 +638,16 @@ def get_student_marks(reg_no):
         ORDER BY m.subject_code, m.exam_type
         """,
         (reg_no,), fetch_all=True
-    )
+    ) or []
+
+    if not records:
+        return jsonify({
+            'register_no': reg_no,
+            'records': [],
+            'grouped': {},
+            'average_percentage': None
+        }), 200
+
     grouped = {}
     for r in records:
         e = r['exam_type']
@@ -378,7 +657,7 @@ def get_student_marks(reg_no):
 
     total_score = sum(r['marks_obtained'] for r in records)
     total_max = sum(r['max_marks'] for r in records)
-    avg_pct = round((total_score / total_max) * 100, 1) if total_max > 0 else 0.0
+    avg_pct = round((total_score / total_max) * 100, 1) if total_max > 0 else None
 
     return jsonify({
         'register_no': reg_no,
@@ -428,6 +707,10 @@ def get_all_fees():
 
 @app.route('/api/fees/student/<reg_no>', methods=['GET'])
 def get_student_fee(reg_no):
+    caller = get_optional_auth_user()
+    if caller and caller.get('role') == 'student' and caller.get('user_id') != reg_no:
+        return jsonify({'message': "Access forbidden: You cannot view another student's fee records"}), 403
+
     student = db.execute_query(
         "SELECT * FROM students WHERE register_no = ?",
         (reg_no,), fetch_one=True
@@ -620,7 +903,12 @@ def get_admin_stats():
         pres = sum(1 for a in att if a['status'] == 'Present')
         rate = round((pres / len(att)) * 100, 1)
     else:
-        rate = 94.2
+        all_att = db.execute_query("SELECT status FROM attendance", fetch_all=True)
+        if all_att:
+            pres = sum(1 for a in all_att if a['status'] == 'Present')
+            rate = round((pres / len(all_att)) * 100, 1)
+        else:
+            rate = 0.0
 
     return jsonify({
         'total_students': students_cnt,
@@ -630,6 +918,401 @@ def get_admin_stats():
         'total_outstanding': total_due,
         'attendance_rate': rate
     }), 200
+
+# ----------------- ADMIN STUDENT MANAGEMENT ENDPOINTS -----------------
+
+@app.route('/api/admin/students', methods=['GET'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_get_students(current_user):
+    search = request.args.get('search', '').strip()
+    dept = request.args.get('department', '').strip()
+    year = request.args.get('year', '').strip()
+    semester = request.args.get('semester', '').strip()
+    section = request.args.get('section', '').strip()
+
+    query = """
+        SELECT s.*, u.email as user_email, u.phone as user_phone,
+               f.tuition_fee, f.paid_amount,
+               (f.tuition_fee + f.exam_fee + f.transport_fee + f.hostel_fee + f.other_fee - f.paid_amount) AS balance
+        FROM students s
+        LEFT JOIN users u ON s.register_no = u.user_id
+        LEFT JOIN fees f ON s.register_no = f.register_no
+        WHERE 1=1
+    """
+    params = []
+    if search:
+        query += " AND (s.register_no LIKE ? OR s.name LIKE ? OR s.email LIKE ?)"
+        wild = f"%{search}%"
+        params.extend([wild, wild, wild])
+    if dept and dept != 'All':
+        query += " AND s.department = ?"
+        params.append(dept)
+    if year and year != 'All':
+        query += " AND s.year = ?"
+        params.append(year)
+    if semester and semester != 'All':
+        query += " AND s.semester = ?"
+        params.append(semester)
+    if section and section != 'All':
+        query += " AND s.section = ?"
+        params.append(section)
+
+    query += " ORDER BY s.register_no ASC"
+    students = db.execute_query(query, params, fetch_all=True) or []
+    return jsonify({'students': students, 'total': len(students)}), 200
+
+@app.route('/api/admin/students', methods=['POST'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_create_student(current_user):
+    try:
+        data = request.get_json() or {}
+        reg_no = data.get('register_no', '').strip()
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        phone = data.get('phone', '').strip()
+        dept = data.get('department', 'Computer Science Engineering').strip()
+        year = int(data.get('year', 1) or 1)
+        semester = int(data.get('semester', 1) or 1)
+        section = data.get('section', 'A').strip().upper()
+        batch = data.get('batch', '2024-2028').strip()
+        password = data.get('password', 'student123').strip() or 'student123'
+        tuition_fee = float(data.get('tuition_fee', 60000) or 60000)
+        exam_fee = float(data.get('exam_fee', 5000) or 5000)
+        transport_fee = float(data.get('transport_fee', 0) or 0)
+        hostel_fee = float(data.get('hostel_fee', 0) or 0)
+        other_fee = float(data.get('other_fee', 2000) or 2000)
+        paid_amount = float(data.get('paid_amount', 0) or 0)
+
+        if not reg_no or not name or not email:
+            return jsonify({'message': 'Register Number, Full Name, and Email are required.'}), 400
+
+        existing_reg = db.execute_query(
+            "SELECT id FROM users WHERE user_id = ? UNION SELECT id FROM students WHERE register_no = ?",
+            (reg_no, reg_no), fetch_one=True
+        )
+        if existing_reg:
+            return jsonify({'message': f"Student with Register Number '{reg_no}' already exists"}), 409
+
+        existing_email = db.execute_query(
+            "SELECT id FROM users WHERE email = ? UNION SELECT id FROM students WHERE email = ?",
+            (email, email), fetch_one=True
+        )
+        if existing_email:
+            return jsonify({'message': f"Account with email '{email}' already registered"}), 409
+
+        pw_hash = generate_password_hash(password)
+
+        db.execute_query(
+            """
+            INSERT INTO users (name, user_id, email, password_hash, role, department, phone, batch, year, semester, section)
+            VALUES (?, ?, ?, ?, 'student', ?, ?, ?, ?, ?, ?)
+            """,
+            (name, reg_no, email, pw_hash, dept, phone, batch, year, semester, section),
+            commit=True
+        )
+
+        db.execute_query(
+            """
+            INSERT INTO students (register_no, name, department, year, semester, section, batch, email, phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (reg_no, name, dept, year, semester, section, batch, email, phone),
+            commit=True
+        )
+
+        db.execute_query(
+            """
+            INSERT INTO fees (register_no, tuition_fee, exam_fee, transport_fee, hostel_fee, other_fee, paid_amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (reg_no, tuition_fee, exam_fee, transport_fee, hostel_fee, other_fee, paid_amount),
+            commit=True
+        )
+
+        new_student = db.execute_query("SELECT * FROM students WHERE register_no = ?", (reg_no,), fetch_one=True)
+        return jsonify({
+            'message': f"Student {name} ({reg_no}) enrolled successfully.",
+            'student': new_student
+        }), 201
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/students/<register_no>', methods=['PUT'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_update_student(current_user, register_no):
+    try:
+        data = request.get_json() or {}
+        student = db.execute_query("SELECT * FROM students WHERE register_no = ?", (register_no,), fetch_one=True)
+        if not student:
+            return jsonify({'message': f"Student '{register_no}' not found"}), 404
+
+        name = data.get('name', student['name']).strip()
+        dept = data.get('department', student['department']).strip()
+        year = int(data.get('year', student.get('year', 1)) or 1)
+        semester = int(data.get('semester', student.get('semester', 1)) or 1)
+        section = data.get('section', student.get('section', 'A')).strip().upper()
+        batch = data.get('batch', student.get('batch', '2024-2028')).strip()
+        email = data.get('email', student.get('email', '')).strip()
+        phone = data.get('phone', student.get('phone', '')).strip()
+
+        db.execute_query(
+            """
+            UPDATE students 
+            SET name = ?, department = ?, year = ?, semester = ?, section = ?, batch = ?, email = ?, phone = ?
+            WHERE register_no = ?
+            """,
+            (name, dept, year, semester, section, batch, email, phone, register_no),
+            commit=True
+        )
+
+        db.execute_query(
+            """
+            UPDATE users 
+            SET name = ?, department = ?, year = ?, semester = ?, section = ?, batch = ?, email = ?, phone = ?
+            WHERE user_id = ?
+            """,
+            (name, dept, year, semester, section, batch, email, phone, register_no),
+            commit=True
+        )
+
+        updated = db.execute_query("SELECT * FROM students WHERE register_no = ?", (register_no,), fetch_one=True)
+        return jsonify({'message': f"Student {register_no} updated successfully", 'student': updated}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/students/<register_no>', methods=['DELETE'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_delete_student(current_user, register_no):
+    try:
+        student = db.execute_query("SELECT * FROM students WHERE register_no = ?", (register_no,), fetch_one=True)
+        if not student:
+            return jsonify({'message': f"Student '{register_no}' not found"}), 404
+
+        db.execute_query("DELETE FROM students WHERE register_no = ?", (register_no,), commit=True)
+        db.execute_query("DELETE FROM users WHERE user_id = ?", (register_no,), commit=True)
+        db.execute_query("DELETE FROM fees WHERE register_no = ?", (register_no,), commit=True)
+        db.execute_query("DELETE FROM marks WHERE register_no = ?", (register_no,), commit=True)
+        db.execute_query("DELETE FROM attendance WHERE register_no = ?", (register_no,), commit=True)
+        db.execute_query("DELETE FROM payments WHERE register_no = ?", (register_no,), commit=True)
+
+        return jsonify({'message': f"Student '{register_no}' and all associated records permanently removed."}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/students/<register_no>/reset-password', methods=['POST'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_reset_password(current_user, register_no):
+    try:
+        data = request.get_json() or {}
+        new_password = data.get('new_password', 'student123').strip() or 'student123'
+        user = db.execute_query("SELECT id FROM users WHERE user_id = ?", (register_no,), fetch_one=True)
+        if not user:
+            return jsonify({'message': f"User account for '{register_no}' not found"}), 404
+
+        pw_hash = generate_password_hash(new_password)
+        db.execute_query("UPDATE users SET password_hash = ? WHERE user_id = ?", (pw_hash, register_no), commit=True)
+
+        return jsonify({'message': f"Password for '{register_no}' successfully reset."}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/students/import-csv', methods=['POST'])
+@token_required(allowed_roles=['college', 'admin'])
+def admin_import_students_csv(current_user):
+    try:
+        csv_text = ""
+        if 'file' in request.files:
+            file = request.files['file']
+            csv_text = file.read().decode('utf-8', errors='ignore')
+        else:
+            data = request.get_json() or {}
+            csv_text = data.get('csv_content', '')
+
+        if not csv_text.strip():
+            return jsonify({'message': 'No CSV content provided'}), 400
+
+        reader = csv.DictReader(io.StringIO(csv_text.strip()))
+        imported = []
+        errors = []
+
+        for row_idx, row in enumerate(reader, start=2):
+            clean_row = {k.strip().lower(): v.strip() for k, v in row.items() if k}
+            reg_no = clean_row.get('register_no') or clean_row.get('reg_no') or clean_row.get('regno') or clean_row.get('userid')
+            name = clean_row.get('name') or clean_row.get('student_name')
+            email = clean_row.get('email') or f"{reg_no.lower()}@svcet.edu.in" if reg_no else None
+            phone = clean_row.get('phone') or clean_row.get('mobile') or ''
+            dept = clean_row.get('department') or clean_row.get('dept') or 'Computer Science Engineering'
+            year = int(clean_row.get('year', 1) or 1)
+            semester = int(clean_row.get('semester', 1) or 1)
+            section = (clean_row.get('section', 'A') or 'A').upper()
+            batch = clean_row.get('batch', '2024-2028') or '2024-2028'
+            password = clean_row.get('password', 'student123') or 'student123'
+            tuition_fee = float(clean_row.get('tuition_fee', 60000) or 60000)
+            exam_fee = float(clean_row.get('exam_fee', 5000) or 5000)
+            paid_amount = float(clean_row.get('paid_amount', 0) or 0)
+
+            if not reg_no or not name:
+                errors.append(f"Row {row_idx}: Missing register_no or name")
+                continue
+
+            existing = db.execute_query(
+                "SELECT id FROM users WHERE user_id = ? UNION SELECT id FROM students WHERE register_no = ?",
+                (reg_no, reg_no), fetch_one=True
+            )
+            if existing:
+                errors.append(f"Row {row_idx}: Register number '{reg_no}' already exists in database (Skipped)")
+                continue
+
+            pw_hash = generate_password_hash(password)
+            try:
+                db.execute_query(
+                    """
+                    INSERT INTO users (name, user_id, email, password_hash, role, department, phone, batch, year, semester, section)
+                    VALUES (?, ?, ?, ?, 'student', ?, ?, ?, ?, ?, ?)
+                    """,
+                    (name, reg_no, email, pw_hash, dept, phone, batch, year, semester, section),
+                    commit=True
+                )
+                db.execute_query(
+                    """
+                    INSERT INTO students (register_no, name, department, year, semester, section, batch, email, phone)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (reg_no, name, dept, year, semester, section, batch, email, phone),
+                    commit=True
+                )
+                db.execute_query(
+                    """
+                    INSERT INTO fees (register_no, tuition_fee, exam_fee, transport_fee, hostel_fee, other_fee, paid_amount)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (reg_no, tuition_fee, exam_fee, 0, 0, 2000, paid_amount),
+                    commit=True
+                )
+                imported.append(reg_no)
+            except Exception as row_err:
+                errors.append(f"Row {row_idx} ({reg_no}): {str(row_err)}")
+
+        return jsonify({
+            'message': f"CSV Import complete: {len(imported)} student(s) enrolled, {len(errors)} issues.",
+            'imported_count': len(imported),
+            'failed_count': len(errors),
+            'imported_registers': imported,
+            'errors': errors
+        }), 200
+    except Exception as e:
+        return jsonify({'message': f"CSV parsing error: {str(e)}"}), 500
+
+@app.route('/api/admin/students/csv-template', methods=['GET'])
+def download_csv_template():
+    template_path = BASE_DIR / 'students_template.csv'
+    if template_path.exists():
+        with open(template_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    else:
+        content = "register_no,name,email,phone,department,year,semester,section,batch,password,tuition_fee,exam_fee,paid_amount\nSVCET010,Kavitha S,kavitha@svcet.edu,9876543210,Computer Science Engineering,2,4,A,2024-2028,Student@123,50000,2500,25000\n"
+    return (content, 200, {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="students_template.csv"'
+    })
+
+# ----------------- FACULTY ATTENDANCE & MARKS ENDPOINTS -----------------
+
+@app.route('/api/faculty/students', methods=['GET'])
+@token_required(allowed_roles=['faculty', 'college', 'admin'])
+def faculty_get_students(current_user):
+    dept = request.args.get('department', current_user.get('department', 'Computer Science Engineering'))
+    semester = request.args.get('semester')
+    year = request.args.get('year')
+    section = request.args.get('section')
+
+    query = "SELECT register_no, name, department, year, semester, section FROM students WHERE 1=1"
+    params = []
+    if dept and dept != 'All':
+        query += " AND department = ?"
+        params.append(dept)
+    if semester and semester != 'All':
+        query += " AND semester = ?"
+        params.append(semester)
+    elif year and year != 'All':
+        query += " AND year = ?"
+        params.append(year)
+    if section and section != 'All':
+        query += " AND section = ?"
+        params.append(section)
+
+    query += " ORDER BY register_no ASC"
+    students = db.execute_query(query, params, fetch_all=True) or []
+    return jsonify({'students': students, 'total': len(students)}), 200
+
+@app.route('/api/faculty/attendance', methods=['POST'])
+@token_required(allowed_roles=['faculty', 'college', 'admin'])
+def faculty_save_attendance(current_user):
+    try:
+        data = request.get_json() or {}
+        date_str = data.get('date', datetime.date.today().strftime('%Y-%m-%d'))
+        subj = data.get('subject_code', 'CS3301')
+        recorded_by = current_user.get('user_id', 'Faculty')
+        records = data.get('records', [])
+
+        for r in records:
+            reg_no = r.get('register_no')
+            status = r.get('status', 'Present')
+            remarks = r.get('remarks', '')
+
+            existing = db.execute_query(
+                "SELECT id FROM attendance WHERE register_no = ? AND date = ? AND subject_code = ?",
+                (reg_no, date_str, subj), fetch_one=True
+            )
+            if existing:
+                db.execute_query(
+                    "UPDATE attendance SET status = ?, remarks = ?, recorded_by = ? WHERE id = ?",
+                    (status, remarks, recorded_by, existing['id']), commit=True
+                )
+            else:
+                db.execute_query(
+                    "INSERT INTO attendance (register_no, date, status, subject_code, recorded_by, remarks) VALUES (?, ?, ?, ?, ?, ?)",
+                    (reg_no, date_str, status, subj, recorded_by, remarks), commit=True
+                )
+
+        return jsonify({'message': f'Attendance for {len(records)} students recorded to database successfully'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/faculty/marks', methods=['POST'])
+@token_required(allowed_roles=['faculty', 'college', 'admin'])
+def faculty_save_marks(current_user):
+    try:
+        data = request.get_json() or {}
+        subj = data.get('subject_code', 'CS3301')
+        exam_type = data.get('exam_type', 'Internal Assessment 1')
+        recorded_by = current_user.get('user_id', 'Faculty')
+        records = data.get('records', [])
+
+        for r in records:
+            reg_no = r.get('register_no')
+            marks_obt = float(r.get('marks_obtained', 0))
+            max_m = float(r.get('max_marks', 100))
+            grade = calculate_grade(marks_obt, max_m)
+
+            existing = db.execute_query(
+                "SELECT id FROM marks WHERE register_no = ? AND subject_code = ? AND exam_type = ?",
+                (reg_no, subj, exam_type), fetch_one=True
+            )
+            if existing:
+                db.execute_query(
+                    "UPDATE marks SET marks_obtained = ?, max_marks = ?, grade = ?, recorded_by = ? WHERE id = ?",
+                    (marks_obt, max_m, grade, recorded_by, existing['id']), commit=True
+                )
+            else:
+                db.execute_query(
+                    "INSERT INTO marks (register_no, subject_code, exam_type, marks_obtained, max_marks, grade, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (reg_no, subj, exam_type, marks_obt, max_m, grade, recorded_by), commit=True
+                )
+
+        return jsonify({'message': f'Marks for {len(records)} students recorded successfully'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
 
 # ----------------- COURSES & CURRICULUM ENDPOINTS -----------------
 

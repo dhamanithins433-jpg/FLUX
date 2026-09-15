@@ -387,6 +387,78 @@ body {
 
 }
 
+/* Logged-in Header Badge & Actions */
+.header-logged-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f1f5f9;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+}
+
+.welcome-text {
+  font-size: 13.5px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.welcome-text strong {
+  color: #0f172a;
+}
+
+.role-pill {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+
+.role-pill.role-student {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.role-pill.role-faculty {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.role-pill.role-admin,
+.role-pill.role-college {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.logout-button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.logout-button:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
 
 
 
@@ -635,6 +707,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;
+  
 }
 
 
@@ -658,7 +731,6 @@ body {
     linear-gradient(
       145deg,
       white,
-      #f4f7fa
     );
 
   transition: 0.3s;
@@ -690,6 +762,7 @@ body {
   box-shadow: 0 8px 20px rgba(9, 43, 92, 0.1);
   position: relative;
   cursor: pointer;
+  
 }
 
 .department-card.featured-cse:hover {

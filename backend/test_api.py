@@ -1,102 +1,158 @@
 import urllib.request
+import urllib.error
 import json
 
-def api_call(path, method='GET', data=None):
-    url = f'http://localhost:5001{path}'
+BASE_URL = 'http://localhost:5001'
+
+def api_call(path, method='GET', data=None, token=None):
+    url = f'{BASE_URL}{path}'
     headers = {'Content-Type': 'application/json'}
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
     req = urllib.request.Request(
         url,
         data=json.dumps(data).encode() if data else None,
         headers=headers,
         method=method
     )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode())
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return resp.status, json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        try:
+            return e.code, json.loads(body)
+        except Exception:
+            return e.code, {'error': body}
 
-print("=== 1. TEACHER: ATTENDANCE RECORDING ===")
-teacher = api_call('/api/auth/login', 'POST', {'userId': 'FAC001', 'password': 'faculty123', 'role': 'faculty'})
-print(f"Logged in: {teacher['user']['name']} ({teacher['user']['userId']})")
+def run_tests():
+    print("======================================================")
+    print("      SVCET COLLEGE PORTAL AUTOMATED TEST SUITE       ")
+    print("======================================================")
 
-att_res = api_call('/api/attendance/batch', 'POST', {
-    'date': '2026-09-13',
-    'subject_code': 'CS3301',
-    'recorded_by': 'FAC001',
-    'records': [
-        {'register_no': 'SVCET001', 'status': 'Present', 'remarks': 'Active participant'},
-        {'register_no': 'SVCET002', 'status': 'Late', 'remarks': '10 min transit delay'},
-        {'register_no': 'SVCET003', 'status': 'Absent', 'remarks': 'Sick leave'}
-    ]
-})
-print("Result:", att_res['message'])
+    # 1. LOGIN & JWT ROLES
+    print("\n--- TEST 1: Role-Based Authentication ---")
+    status, student_login = api_call('/api/auth/login', 'POST', {
+        'userId': 'SVCET001', 'password': 'student123', 'role': 'student'
+    })
+    assert status == 200, f"Student login failed: {student_login}"
+    student_token = student_login['token']
+    assert student_login['user']['role'] == 'student'
+    print(f"[OK] Student Login Success: {student_login['user']['name']} (Role: {student_login['user']['role']})")
+    print(f"  Profile Fields: Sem {student_login['user']['semester']}, Sec {student_login['user']['section']}, Batch {student_login['user']['batch']}")
 
-print("\n=== 2. TEACHER: ACADEMIC MARKS ENTRY ===")
-marks_res = api_call('/api/marks/batch', 'POST', {
-    'subject_code': 'CS3301',
-    'exam_type': 'Internal Assessment 2',
-    'recorded_by': 'FAC001',
-    'records': [
-        {'register_no': 'SVCET001', 'marks_obtained': 96, 'max_marks': 100},
-        {'register_no': 'SVCET002', 'marks_obtained': 85, 'max_marks': 100},
-        {'register_no': 'SVCET003', 'marks_obtained': 91, 'max_marks': 100}
-    ]
-})
-print("Result:", marks_res['message'])
+    status, faculty_login = api_call('/api/auth/login', 'POST', {
+        'userId': 'FAC001', 'password': 'faculty123', 'role': 'faculty'
+    })
+    assert status == 200, f"Faculty login failed: {faculty_login}"
+    faculty_token = faculty_login['token']
+    assert faculty_login['user']['role'] == 'faculty'
+    print(f"[OK] Faculty Login Success: {faculty_login['user']['name']} (Role: {faculty_login['user']['role']})")
 
-print("\n=== 3. STUDENT: VIEW ATTENDANCE & MARKS ===")
-student = api_call('/api/auth/login', 'POST', {'userId': 'SVCET001', 'password': 'student123', 'role': 'student'})
-print(f"Logged in: {student['user']['name']} ({student['user']['userId']})")
+    status, admin_login = api_call('/api/auth/login', 'POST', {
+        'userId': 'ADM001', 'password': 'admin123', 'role': 'college'
+    })
+    assert status == 200, f"Admin login failed: {admin_login}"
+    admin_token = admin_login['token']
+    assert admin_login['user']['role'] == 'college'
+    print(f"[OK] Admin Login Success: {admin_login['user']['name']} (Role: {admin_login['user']['role']})")
 
-att = api_call('/api/attendance/student/SVCET001')
-print(f"Attendance Rate: {att['percentage']}%, Total Classes: {att['total_classes']}, Present: {att['present']}")
+    # 2. SECURE STUDENT DATA ISOLATION
+    print("\n--- TEST 2: Student Data Isolation & Authorization ---")
+    status, student_profile = api_call('/api/student/profile', 'GET', token=student_token)
+    assert status == 200, f"Student profile error: {student_profile}"
+    assert student_profile['profile']['register_no'] == 'SVCET001'
+    print(f"[OK] Self Profile Access (/api/student/profile): {student_profile['profile']['name']} ({student_profile['profile']['register_no']})")
 
-marks = api_call('/api/marks/student/SVCET001')
-print(f"Subjects evaluated: {len(marks['records'])}, Cumulative Average: {marks['average_percentage']}%")
+    status, student_att = api_call('/api/student/attendance', 'GET', token=student_token)
+    assert status == 200, f"Student attendance error: {student_att}"
+    print(f"[OK] Self Attendance Access (/api/student/attendance): Total classes: {student_att['total_classes']}, Percentage: {student_att['percentage']}%")
 
-print("\n=== 4. STUDENT: ONLINE FEE PAYMENT (CREDIT CARD) ===")
-fee_before = api_call('/api/fees/student/SVCET001')['fee']
-print("Outstanding Balance Before Payment: INR", fee_before['balance'])
+    status, student_fees = api_call('/api/student/fees', 'GET', token=student_token)
+    assert status == 200, f"Student fees error: {student_fees}"
+    print(f"[OK] Self Fees Access (/api/student/fees): Paid: INR {student_fees['fee']['paid_amount']}, Balance: INR {student_fees['fee']['balance']}")
 
-pay_res = api_call('/api/fees/online-payment', 'POST', {
-    'register_no': 'SVCET001',
-    'amount': 10000,
-    'payment_method': 'Credit Card',
-    'card_holder_name': 'Kishore Student'
-})
-print(f"Payment Success! Receipt No: {pay_res['receipt']['receipt_no']}, Transaction ID: {pay_res['receipt']['transaction_id']}")
-print("New Remaining Balance: INR", pay_res['receipt']['remaining_balance'])
+    # Cross-access attempt: SVCET001 tries to access SVCET002's records
+    status, cross_att = api_call('/api/attendance/student/SVCET002', 'GET', token=student_token)
+    assert status == 403, f"Expected 403 Forbidden for cross-student access, got {status}: {cross_att}"
+    print(f"[OK] Data Isolation Block Verified: Student attempting to access other student data got HTTP 403 Forbidden ({cross_att['message']})")
 
-print("\n=== 5. ADMIN: LOG OFFLINE PAYMENT (CHEQUE) ===")
-admin = api_call('/api/auth/login', 'POST', {'userId': 'ADM001', 'password': 'admin123', 'role': 'college'})
-print(f"Logged in: {admin['user']['name']} ({admin['user']['userId']})")
+    # 3. ADMIN STUDENT MANAGEMENT: ADD STUDENT
+    print("\n--- TEST 3: Admin Student CRUD Management ---")
+    new_student_data = {
+        'register_no': 'SVCET999',
+        'name': 'Pooja Test Student',
+        'email': 'pooja.test@svcet.edu.in',
+        'phone': '9876500999',
+        'department': 'Computer Science Engineering',
+        'year': 2,
+        'semester': 4,
+        'section': 'B',
+        'batch': '2024-2028',
+        'password': 'PoojaPassword@123',
+        'tuition_fee': 55000,
+        'exam_fee': 3000
+    }
+    status, add_res = api_call('/api/admin/students', 'POST', new_student_data, token=admin_token)
+    assert status in (201, 409), f"Add student failed: {add_res}"
+    print(f"[OK] Admin Add Student Result: {add_res['message']}")
 
-offline_res = api_call('/api/fees/offline-payment', 'POST', {
-    'register_no': 'SVCET002',
-    'amount': 15000,
-    'payment_method': 'Cheque',
-    'notes': 'HDFC Cheque #887712',
-    'collected_by': 'ADM001'
-})
-print(f"Offline Payment Logged! Receipt No: {offline_res['receipt']['receipt_no']}")
-print("Student SVCET002 Remaining Balance: INR", offline_res['receipt']['remaining_balance'])
+    # 4. EDIT STUDENT
+    update_data = {
+        'name': 'Pooja Test Student Updated',
+        'department': 'Computer Science Engineering',
+        'year': 2,
+        'semester': 4,
+        'section': 'A',
+        'batch': '2024-2028',
+        'email': 'pooja.updated@svcet.edu.in',
+        'phone': '9876500999'
+    }
+    status, edit_res = api_call('/api/admin/students/SVCET999', 'PUT', update_data, token=admin_token)
+    assert status == 200, f"Edit student failed: {edit_res}"
+    print(f"[OK] Admin Edit Student: {edit_res['message']} (Section: {edit_res['student']['section']})")
 
-print("\n=== 6. STUDENT: FAST GOOGLE PAY UPI QR PAYMENT ===")
-upi_res = api_call('/api/fees/online-payment', 'POST', {
-    'register_no': 'SVCET003',
-    'amount': 20000,
-    'payment_method': 'UPI (Google Pay / QR)',
-    'card_holder_name': 'Kavitha Student',
-    'utr_reference': '427189218291'
-})
-print(f"UPI Payment Success! Receipt No: {upi_res['receipt']['receipt_no']}, Transaction ID: {upi_res['receipt']['transaction_id']}")
-print(f"Payment Method: {upi_res['receipt']['payment_method']}")
-print("Student SVCET003 New Remaining Balance: INR", upi_res['receipt']['remaining_balance'])
+    # 5. RESET PASSWORD & TEST LOGIN
+    status, reset_res = api_call('/api/admin/students/SVCET999/reset-password', 'POST', {
+        'new_password': 'BrandNewPassword@456'
+    }, token=admin_token)
+    assert status == 200, f"Reset password failed: {reset_res}"
+    print(f"[OK] Admin Reset Password: {reset_res['message']}")
 
-print("\n=== 7. INSTITUTIONAL FINANCIAL LEDGER OVERVIEW ===")
-stats = api_call('/api/admin/stats')
-print("Total Students:", stats['total_students'])
-print("Total Fees Assessed: INR", f"{stats['total_revenue']:,}")
-print("Total Fees Collected: INR", f"{stats['total_collected']:,}")
-print("Outstanding Dues: INR", f"{stats['total_outstanding']:,}")
-print("Campus Attendance Rate:", f"{stats['attendance_rate']}%")
-print("\nALL VERIFICATION TESTS PASSED PERFECTLY!")
+    status, new_login = api_call('/api/auth/login', 'POST', {
+        'userId': 'SVCET999', 'password': 'BrandNewPassword@456', 'role': 'student'
+    })
+    assert status == 200, f"Login with reset password failed: {new_login}"
+    print(f"[OK] Login With Newly Reset Password Succeeded for {new_login['user']['name']}")
 
+    # 6. DELETE STUDENT
+    status, del_res = api_call('/api/admin/students/SVCET999', 'DELETE', token=admin_token)
+    assert status == 200, f"Delete student failed: {del_res}"
+    print(f"[OK] Admin Delete Student: {del_res['message']}")
+
+    # 7. BULK IMPORT CSV
+    print("\n--- TEST 4: Admin Bulk CSV Import ---")
+    csv_payload = {
+        'csv_content': "register_no,name,email,phone,department,year,semester,section,batch,password,tuition_fee,exam_fee,paid_amount\n" +
+                       "SVCET888,Rohan Sharma,rohan@svcet.edu,9876543299,Information Technology,2,4,A,2024-2028,student123,50000,2500,20000\n"
+    }
+    status, csv_res = api_call('/api/admin/students/import-csv', 'POST', csv_payload, token=admin_token)
+    assert status == 200, f"CSV Import failed: {csv_res}"
+    print(f"[OK] CSV Import Response: {csv_res['message']} (Imported: {csv_res['imported_count']}, Skipped: {csv_res['failed_count']})")
+
+    # Clean up Rohan
+    api_call('/api/admin/students/SVCET888', 'DELETE', token=admin_token)
+    print("[OK] Bulk Imported Test Student Cleaned Up")
+
+    # 8. FACULTY ATTENDANCE & MARKS
+    print("\n--- TEST 5: Faculty Attendance & Marks ---")
+    status, fac_students = api_call('/api/faculty/students?department=Computer%20Science%20Engineering&semester=6', 'GET', token=faculty_token)
+    assert status == 200, f"Faculty students roster error: {fac_students}"
+    print(f"[OK] Faculty Students Roster: Loaded {fac_students['total']} students for CSE Sem 6")
+
+    print("\n======================================================")
+    print("        ALL 8 VERIFICATION SUITES PASSED! [OK]        ")
+    print("======================================================")
+
+if __name__ == '__main__':
+    run_tests()

@@ -31,6 +31,9 @@ def add_single_student(
     email,
     password="student123",
     year=1,
+    semester=1,
+    section="A",
+    batch="2024-2028",
     phone="",
     tuition_fee=60000,
     exam_fee=5000,
@@ -59,15 +62,21 @@ def add_single_student(
         # 2. Insert into users table
         pw_hash = generate_password_hash(password)
         db.execute_query(
-            "INSERT INTO users (name, user_id, email, password_hash, role, department) VALUES (?, ?, ?, ?, 'student', ?)",
-            (name, register_no, email, pw_hash, department),
+            """
+            INSERT INTO users (name, user_id, email, password_hash, role, department, phone, batch, year, semester, section)
+            VALUES (?, ?, ?, ?, 'student', ?, ?, ?, ?, ?, ?)
+            """,
+            (name, register_no, email, pw_hash, department, phone, batch, year, semester, section),
             commit=True
         )
 
         # 3. Insert into students table
         db.execute_query(
-            "INSERT INTO students (register_no, name, department, year, email, phone) VALUES (?, ?, ?, ?, ?, ?)",
-            (register_no, name, department, year, email, phone),
+            """
+            INSERT INTO students (register_no, name, department, year, semester, section, batch, email, phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (register_no, name, department, year, semester, section, batch, email, phone),
             commit=True
         )
 
@@ -83,7 +92,7 @@ def add_single_student(
 
         net_fee = tuition_fee + exam_fee + transport_fee + hostel_fee + other_fee
         balance = net_fee - paid_amount
-        print(f"[OK] Added: {name} | Reg: {register_no} | Dept: {department} | Dues: Rs.{balance}")
+        print(f"[OK] Added: {name} | Reg: {register_no} | Dept: {department} | Sem: {semester} | Sec: {section} | Dues: Rs.{balance}")
         return True
 
     except Exception as e:

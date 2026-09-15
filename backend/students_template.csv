@@ -1,5 +1,5 @@
-name,register_no,department,email,password,year,phone,tuition_fee,exam_fee,transport_fee,hostel_fee,other_fee,paid_amount
-Kavitha S,112424104021,Computer Science Engineering,kavitha.s@svcet.edu.in,student123,1,+91 9840123456,65000,5000,10000,0,2000,30000
-Siddharth M,112424104022,Artificial Intelligence and Data Science,siddharth.m@svcet.edu.in,student123,1,+91 9789123456,70000,5000,0,15000,3000,50000
-Dhanush R,112424104023,Information Technology,dhanush.r@svcet.edu.in,student123,1,+91 9123456780,60000,5000,8000,0,2000,20000
-Ananya P,112424104024,Electronics & Communication,ananya.p@svcet.edu.in,student123,1,+91 9876501234,60000,5000,0,12000,2000,60000
+register_no,name,email,phone,department,year,semester,section,batch,password,tuition_fee,exam_fee,paid_amount
+SVCET001,Student Name,student1@svcet.edu.in,9876543210,Computer Science Engineering,3,6,A,2023-2027,student123,60000,5000,60000
+SVCET002,Student Name,student2@svcet.edu.in,9876543211,Information Technology,3,6,A,2023-2027,student123,60000,5000,50000
+SVCET003,Student Name,student3@svcet.edu.in,9876543212,Computer Science Engineering,2,4,B,2024-2028,student123,55000,5000,40000
+SVCET004,Student Name,student4@svcet.edu.in,9876543213,Mechanical Engineering,4,8,A,2022-2026,student123,58000,5000,58000

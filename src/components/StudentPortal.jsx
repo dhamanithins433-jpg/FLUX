@@ -3,14 +3,15 @@ import ReceiptModal from "./ReceiptModal";
 
 const API_BASE = "http://localhost:5001/api";
 
-function StudentPortal({ user }) {
-  const [activeTab, setActiveTab] = useState("qr-pay");
-  const regNo = user?.userId || "SVCET001";
+function StudentPortal({ user, initialTab }) {
+  const [activeTab, setActiveTab] = useState(initialTab || "qr-pay");
+  const regNo = user?.register_no || user?.userId || "";
 
   // Data States
   const [feeData, setFeeData] = useState(null);
   const [attendanceData, setAttendanceData] = useState(null);
   const [marksData, setMarksData] = useState(null);
+  const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Online Payment Checkout Modal
@@ -18,10 +19,10 @@ function StudentPortal({ user }) {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [cardData, setCardData] = useState({
-    cardNumber: "4532 8912 3456 7890",
-    cardHolder: user?.name || "Kishore Student",
-    expiry: "08/29",
-    cvv: "892"
+    cardNumber: "",
+    cardHolder: user?.name || "",
+    expiry: "",
+    cvv: ""
   });
   const [processingPayment, setProcessingPayment] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState(null);
@@ -40,23 +41,36 @@ function StudentPortal({ user }) {
   };
 
   useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
     fetchAllStudentData();
   }, [regNo]);
 
   const fetchAllStudentData = async () => {
     setLoading(true);
     try {
-      const [feeRes, attRes, marksRes] = await Promise.all([
-        fetch(`${API_BASE}/fees/student/${regNo}`).then((r) => r.json()),
-        fetch(`${API_BASE}/attendance/student/${regNo}`).then((r) => r.json()),
-        fetch(`${API_BASE}/marks/student/${regNo}`).then((r) => r.json())
+      const token = localStorage.getItem("svcet_token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const [feeRes, attRes, marksRes, profRes] = await Promise.all([
+        fetch(`${API_BASE}/student/fees`, { headers }).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/student/attendance`, { headers }).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/student/marks`, { headers }).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/student/profile`, { headers }).then((r) => r.json()).catch(() => ({}))
       ]);
 
       setFeeData(feeRes);
       setAttendanceData(attRes);
       setMarksData(marksRes);
+      if (profRes && profRes.profile) {
+        setProfileData(profRes.profile);
+      }
 
-      if (feeRes.fee && feeRes.fee.balance > 0) {
+      if (feeRes?.fee && Number(feeRes.fee.balance) > 0) {
         setPaymentAmount(feeRes.fee.balance);
       }
     } catch (err) {
@@ -107,7 +121,7 @@ function StudentPortal({ user }) {
           register_no: regNo,
           amount: amt,
           payment_method: isUpi ? "UPI (Google Pay / QR)" : paymentMethod,
-          card_holder_name: isUpi ? user?.name || "Student" : cardData.cardHolder,
+          card_holder_name: isUpi ? (profileData?.name || user?.name || "Student") : cardData.cardHolder,
           utr_reference: isUpi ? utrNumber.trim() : undefined
         })
       });
@@ -119,8 +133,8 @@ function StudentPortal({ user }) {
         setUtrNumber("");
         const fullReceipt = {
           ...data.receipt,
-          student_name: user?.name || "Student",
-          department: user?.department || "Computer Science Engineering"
+          student_name: profileData?.name || user?.name || "Student",
+          department: profileData?.department || user?.department || "Computer Science Engineering"
         };
         setActiveReceipt(fullReceipt);
         setSuccessToast(`Online fee payment of ₹${amt.toLocaleString("en-IN")} completed successfully!`);
@@ -139,8 +153,14 @@ function StudentPortal({ user }) {
 
   const fee = feeData?.fee;
   const transactions = feeData?.transactions || [];
-  const attendancePct = attendanceData?.percentage !== undefined ? attendanceData.percentage : 90;
-  const isAttendanceShortage = attendancePct < 75;
+
+  // Authentic stats from database (NO FAKE / DEFAULT NUMBERS)
+  const hasAttendanceData = attendanceData && attendanceData.total_classes !== undefined && attendanceData.total_classes > 0;
+  const attendancePct = hasAttendanceData ? attendanceData.percentage : null;
+  const isAttendanceShortage = attendancePct !== null && attendancePct < 75;
+
+  const hasMarksData = marksData && marksData.average_percentage !== undefined && marksData.average_percentage !== null && marksData.records && marksData.records.length > 0;
+  const averageMarks = hasMarksData ? marksData.average_percentage : null;
 
   return (
     <div className="portal-container">
@@ -148,8 +168,10 @@ function StudentPortal({ user }) {
       <div className="portal-header">
         <div>
           <span className="portal-pill student">STUDENT PORTAL</span>
-          <h2>Welcome, {user?.name || "Student"}</h2>
-          <p>Register No: <strong>{regNo}</strong> • {user?.department || "Engineering"} • SVCET Campus</p>
+          <h2>Welcome, {profileData?.name || user?.name || "Student"}</h2>
+          <p>
+            Register No: <strong>{profileData?.register_no || regNo}</strong> • {profileData?.department || user?.department || "Engineering"} • Semester {profileData?.semester || user?.semester || 1} • SVCET Campus
+          </p>
         </div>
         {fee && Number(fee.balance) > 0 && (
           <div className="portal-header-actions">
@@ -193,9 +215,15 @@ function StudentPortal({ user }) {
           <div className="stat-icon">📅</div>
           <div>
             <span className="stat-label">My Attendance Percentage</span>
-            <strong className={`stat-value ${isAttendanceShortage ? "text-red" : "text-green"}`}>
-              {attendancePct}%
-            </strong>
+            {hasAttendanceData ? (
+              <strong className={`stat-value ${isAttendanceShortage ? "text-red" : "text-green"}`}>
+                {attendancePct}%
+              </strong>
+            ) : (
+              <strong className="stat-value text-muted" style={{ fontSize: "15px" }}>
+                No attendance data available.
+              </strong>
+            )}
           </div>
         </div>
 
@@ -203,9 +231,15 @@ function StudentPortal({ user }) {
           <div className="stat-icon">🏆</div>
           <div>
             <span className="stat-label">Academic Average / Grade</span>
-            <strong className="stat-value text-blue">
-              {marksData?.average_percentage || 86}% (Grade A+)
-            </strong>
+            {hasMarksData ? (
+              <strong className="stat-value text-blue">
+                {averageMarks}%
+              </strong>
+            ) : (
+              <strong className="stat-value text-muted" style={{ fontSize: "15px" }}>
+                No marks available.
+              </strong>
+            )}
           </div>
         </div>
 
@@ -213,9 +247,15 @@ function StudentPortal({ user }) {
           <div className="stat-icon">✅</div>
           <div>
             <span className="stat-label">Total Fee Paid</span>
-            <strong className="stat-value text-green">
-              ₹{Number(fee?.paid_amount || 0).toLocaleString("en-IN")}
-            </strong>
+            {fee ? (
+              <strong className="stat-value text-green">
+                ₹{Number(fee.paid_amount || 0).toLocaleString("en-IN")}
+              </strong>
+            ) : (
+              <strong className="stat-value text-muted" style={{ fontSize: "15px" }}>
+                No fee records available.
+              </strong>
+            )}
           </div>
         </div>
 
@@ -223,15 +263,27 @@ function StudentPortal({ user }) {
           <div className="stat-icon">💳</div>
           <div>
             <span className="stat-label">Balance Outstanding</span>
-            <strong className={`stat-value ${Number(fee?.balance || 0) > 0 ? "text-red" : "text-green"}`}>
-              ₹{Number(fee?.balance || 0).toLocaleString("en-IN")}
-            </strong>
+            {fee ? (
+              <strong className={`stat-value ${Number(fee.balance || 0) > 0 ? "text-red" : "text-green"}`}>
+                ₹{Number(fee.balance || 0).toLocaleString("en-IN")}
+              </strong>
+            ) : (
+              <strong className="stat-value text-muted" style={{ fontSize: "15px" }}>
+                No fee records available.
+              </strong>
+            )}
           </div>
         </div>
       </div>
 
       {/* TABS */}
       <div className="portal-tabs">
+        <button
+          className={activeTab === "profile" ? "tab-btn active" : "tab-btn"}
+          onClick={() => setActiveTab("profile")}
+        >
+          👤 Student Profile
+        </button>
         <button
           className={activeTab === "qr-pay" ? "tab-btn active qr-tab-btn" : "tab-btn qr-tab-btn"}
           onClick={() => setActiveTab("qr-pay")}
@@ -257,6 +309,64 @@ function StudentPortal({ user }) {
           📋 Attendance Records
         </button>
       </div>
+
+      {/* ================= TAB: STUDENT PROFILE ================= */}
+      {activeTab === "profile" && (
+        <div className="portal-card">
+          <div className="card-top-title">
+            <div>
+              <span className="badge-paid">OFFICIAL ACADEMIC PROFILE</span>
+              <h3>Verified Student Particulars</h3>
+              <p className="sub-note">Database Record from Sri Venkateswara College of Engineering and Technology</p>
+            </div>
+            <span className="cgpa-pill">Verified Active Student</span>
+          </div>
+
+          <div className="student-profile-display-grid">
+            <div className="profile-detail-card">
+              <span className="profile-field-label">Official Register Number</span>
+              <strong className="profile-field-value highlight-reg">{profileData?.register_no || regNo}</strong>
+            </div>
+
+            <div className="profile-detail-card">
+              <span className="profile-field-label">Full Name</span>
+              <strong className="profile-field-value">{profileData?.name || user?.name || "Student"}</strong>
+            </div>
+
+            <div className="profile-detail-card">
+              <span className="profile-field-label">Academic Department</span>
+              <strong className="profile-field-value">{profileData?.department || user?.department || "-"}</strong>
+            </div>
+
+            <div className="profile-detail-card">
+              <span className="profile-field-label">Current Year & Semester</span>
+              <strong className="profile-field-value">
+                Year {profileData?.year || user?.year || 1} • Semester {profileData?.semester || user?.semester || 1}
+              </strong>
+            </div>
+
+            <div className="profile-detail-card">
+              <span className="profile-field-label">Class Section</span>
+              <strong className="profile-field-value">Section {profileData?.section || user?.section || "A"}</strong>
+            </div>
+
+            <div className="profile-detail-card">
+              <span className="profile-field-label">Academic Batch</span>
+              <strong className="profile-field-value">{profileData?.batch || user?.batch || "2024-2028"}</strong>
+            </div>
+
+            <div className="profile-detail-card">
+              <span className="profile-field-label">Institutional Email</span>
+              <strong className="profile-field-value">{profileData?.email || user?.email || "-"}</strong>
+            </div>
+
+            <div className="profile-detail-card">
+              <span className="profile-field-label">Contact Phone</span>
+              <strong className="profile-field-value">{profileData?.phone || user?.phone || "-"}</strong>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= TAB 0: INSTANT GOOGLE PAY UPI QR PAYMENT ================= */}
       {activeTab === "qr-pay" && (
@@ -402,70 +512,78 @@ function StudentPortal({ user }) {
       {activeTab === "fees" && (
         <div className="portal-cards-row">
           {/* FEE BREAKDOWN CARD */}
-          <div className="portal-card flex-2">
-            <div className="card-top-title">
-              <h3>Academic Year Institutional Fee Schedule</h3>
-              {Number(fee?.balance || 0) <= 0 ? (
-                <span className="badge-paid">All Dues Cleared</span>
+          {!fee ? (
+            <div className="portal-card flex-2" style={{ textAlign: "center", padding: "48px 24px" }}>
+              <div style={{ fontSize: "40px", marginBottom: "16px" }}>💳</div>
+              <h3 style={{ marginBottom: "8px" }}>No fee records available.</h3>
+              <p className="text-muted">No institutional fee schedule has been assigned to your register number yet.</p>
+            </div>
+          ) : (
+            <div className="portal-card flex-2">
+              <div className="card-top-title">
+                <h3>Academic Year Institutional Fee Schedule</h3>
+                {Number(fee?.balance || 0) <= 0 ? (
+                  <span className="badge-paid">All Dues Cleared</span>
+                ) : (
+                  <span className="badge-due">Payment Due</span>
+                )}
+              </div>
+
+              <div className="fee-breakdown-grid">
+                <div className="fee-item">
+                  <span>Tuition & Laboratory Fee</span>
+                  <strong>₹{Number(fee?.tuition_fee || 0).toLocaleString("en-IN")}</strong>
+                </div>
+                <div className="fee-item">
+                  <span>University Examination Fee</span>
+                  <strong>₹{Number(fee?.exam_fee || 0).toLocaleString("en-IN")}</strong>
+                </div>
+                <div className="fee-item">
+                  <span>College Bus / Transport Fee</span>
+                  <strong>₹{Number(fee?.transport_fee || 0).toLocaleString("en-IN")}</strong>
+                </div>
+                <div className="fee-item">
+                  <span>Hostel & Dining Charges</span>
+                  <strong>₹{Number(fee?.hostel_fee || 0).toLocaleString("en-IN")}</strong>
+                </div>
+                <div className="fee-item">
+                  <span>Library, Sports & Special Amenities</span>
+                  <strong>₹{Number(fee?.other_fee || 0).toLocaleString("en-IN")}</strong>
+                </div>
+              </div>
+
+              <div className="fee-total-summary">
+                <div className="summary-row">
+                  <span>Total Annual Institutional Fee:</span>
+                  <strong>₹{Number(fee?.total_fee || 0).toLocaleString("en-IN")}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Amount Paid Till Date:</span>
+                  <strong className="text-green">₹{Number(fee?.paid_amount || 0).toLocaleString("en-IN")}</strong>
+                </div>
+                <div className="summary-row highlight">
+                  <span>Outstanding Dues / Net Payable:</span>
+                  <strong className={Number(fee?.balance || 0) > 0 ? "text-red" : "text-green"}>
+                    ₹{Number(fee?.balance || 0).toLocaleString("en-IN")}
+                  </strong>
+                </div>
+              </div>
+
+              {Number(fee?.balance || 0) > 0 ? (
+                <div className="card-bottom-action">
+                  <button className="btn-primary btn-lg btn-block" onClick={() => setShowCheckout(true)}>
+                    🔒 Pay Outstanding Fees Securely Online
+                  </button>
+                </div>
               ) : (
-                <span className="badge-due">Payment Due</span>
+                <div className="card-bottom-action">
+                  <p className="text-green font-semibold" style={{ textAlign: "center" }}>
+                    🎉 All academic and institutional fees for the current semester have been cleared.
+                  </p>
+                </div>
               )}
             </div>
-
-            <div className="fee-breakdown-grid">
-              <div className="fee-item">
-                <span>Tuition & Laboratory Fee</span>
-                <strong>₹{Number(fee?.tuition_fee || 0).toLocaleString("en-IN")}</strong>
-              </div>
-              <div className="fee-item">
-                <span>University Examination Fee</span>
-                <strong>₹{Number(fee?.exam_fee || 0).toLocaleString("en-IN")}</strong>
-              </div>
-              <div className="fee-item">
-                <span>College Bus / Transport Fee</span>
-                <strong>₹{Number(fee?.transport_fee || 0).toLocaleString("en-IN")}</strong>
-              </div>
-              <div className="fee-item">
-                <span>Hostel & Dining Charges</span>
-                <strong>₹{Number(fee?.hostel_fee || 0).toLocaleString("en-IN")}</strong>
-              </div>
-              <div className="fee-item">
-                <span>Library, Sports & Special Amenities</span>
-                <strong>₹{Number(fee?.other_fee || 0).toLocaleString("en-IN")}</strong>
-              </div>
-            </div>
-
-            <div className="fee-total-summary">
-              <div className="summary-row">
-                <span>Total Annual Institutional Fee:</span>
-                <strong>₹{Number(fee?.total_fee || 0).toLocaleString("en-IN")}</strong>
-              </div>
-              <div className="summary-row">
-                <span>Amount Paid Till Date:</span>
-                <strong className="text-green">₹{Number(fee?.paid_amount || 0).toLocaleString("en-IN")}</strong>
-              </div>
-              <div className="summary-row highlight">
-                <span>Outstanding Dues / Net Payable:</span>
-                <strong className={Number(fee?.balance || 0) > 0 ? "text-red" : "text-green"}>
-                  ₹{Number(fee?.balance || 0).toLocaleString("en-IN")}
-                </strong>
-              </div>
-            </div>
-
-            {Number(fee?.balance || 0) > 0 ? (
-              <div className="card-bottom-action">
-                <button className="btn-primary btn-lg btn-block" onClick={() => setShowCheckout(true)}>
-                  🔒 Pay Outstanding Fees Securely Online
-                </button>
-              </div>
-            ) : (
-              <div className="card-bottom-action">
-                <p className="text-green font-semibold" style={{ textAlign: "center" }}>
-                  🎉 All academic and institutional fees for the current semester have been cleared.
-                </p>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* PAYMENT HISTORY & RECEIPTS */}
           <div className="portal-card flex-1">
@@ -556,7 +674,7 @@ function StudentPortal({ user }) {
 
                 <div className="upi-action-btns">
                   <a
-                    href={`upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&am=${fee?.balance || 10000}&cu=INR&tn=SVCET_Fee_${regNo}`}
+                    href={`upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&am=${Number(fee?.balance || 0)}&cu=INR&tn=SVCET_Fee_${regNo}`}
                     className="btn-upi-intent"
                   >
                     📲 Open GPay / UPI App Directly
@@ -582,7 +700,7 @@ function StudentPortal({ user }) {
         <div className="portal-card">
           <div className="card-top-title">
             <h3>Academic Marksheet & Continuous Assessment</h3>
-            <span className="cgpa-pill">Average Score: {marksData?.average_percentage || 85}%</span>
+            <span className="cgpa-pill">{averageMarks !== null ? `Average Score: ${averageMarks}%` : "No marks available."}</span>
           </div>
 
           <div className="table-responsive">
@@ -603,7 +721,7 @@ function StudentPortal({ user }) {
                 {!marksData?.records || marksData.records.length === 0 ? (
                   <tr>
                     <td colSpan="8" style={{ textAlign: "center", padding: "24px" }}>
-                      No examination marks published yet for your register number.
+                      No marks available.
                     </td>
                   </tr>
                 ) : (
@@ -689,7 +807,7 @@ function StudentPortal({ user }) {
                 {!attendanceData?.records || attendanceData.records.length === 0 ? (
                   <tr>
                     <td colSpan="5" style={{ textAlign: "center", padding: "24px" }}>
-                      No attendance entries recorded yet.
+                      No attendance data available.
                     </td>
                   </tr>
                 ) : (

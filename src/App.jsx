@@ -17,50 +17,120 @@ function App() {
     }
   });
 
-  const [activeMenu, setActiveMenu] = useState("home");
+  const [activeMenu, setActiveMenu] = useState(() => {
+    try {
+      const saved = localStorage.getItem("svcet_user");
+      return saved ? "portal" : "home";
+    } catch {
+      return "home";
+    }
+  });
+
+  const [portalTab, setPortalTab] = useState("");
 
   const handleLogout = () => {
     localStorage.removeItem("svcet_token");
     localStorage.removeItem("svcet_user");
     setCurrentUser(null);
     setActiveMenu("home");
+    setPortalTab("");
   };
 
-  // Navigation function
-  const navigateTo = (page) => {
-    setActiveMenu(page);
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    setActiveMenu("portal");
+    setPortalTab("");
   };
 
-  // Menu Data (Sidebar navigation - strictly site sections, no sidebar login)
-  const menuItems = [
-    {
-      id: "home",
-      icon: "🏠",
-      name: "Home"
-    },
-    {
-      id: "courses",
-      icon: "🎓",
-      name: "Courses"
-    },
-    {
-      id: "achievements",
-      icon: "🏆",
-      name: "Achievements"
-    },
-    {
-      id: "placement",
-      icon: "💼",
-      name: "Placement"
-    },
-    {
-      id: "contact",
-      icon: "📞",
-      name: "Contact"
+  // Dynamic Navigation based on logged-in role
+  const getNavItems = () => {
+    if (!currentUser) {
+      return [
+        { id: "home", icon: "🏠", name: "Home" },
+        { id: "courses", icon: "🎓", name: "Courses" },
+        { id: "achievements", icon: "🏆", name: "Achievements" },
+        { id: "placement", icon: "💼", name: "Placement" },
+        { id: "contact", icon: "📞", name: "Contact" }
+      ];
     }
-  ];
 
-  // Department & Courses Data (Expanded list of 13 academic programs)
+    const role = (currentUser.role || "student").toLowerCase();
+
+    if (role === "student") {
+      return [
+        { id: "courses", icon: "🎓", name: "Courses" },
+        { id: "portal-attendance", icon: "📅", name: "Attendance" },
+        { id: "portal-marks", icon: "🏆", name: "Marks" },
+        { id: "portal-fees", icon: "💳", name: "Fees" },
+        { id: "portal-profile", icon: "👤", name: "Profile" },
+        { id: "logout", icon: "🚪", name: "Logout" }
+      ];
+    }
+
+    if (role === "faculty") {
+      return [
+        { id: "portal-students", icon: "👥", name: "Students" },
+        { id: "portal-attendance", icon: "📋", name: "Attendance" },
+        { id: "portal-marks", icon: "📊", name: "Marks" },
+        { id: "courses", icon: "🎓", name: "Courses" },
+        { id: "portal-profile", icon: "👤", name: "Profile" },
+        { id: "logout", icon: "🚪", name: "Logout" }
+      ];
+    }
+
+    // Admin / College
+    return [
+      { id: "portal-students", icon: "👥", name: "Students" },
+      { id: "portal-faculty", icon: "🏛️", name: "Faculty" },
+      { id: "portal-fees", icon: "💳", name: "Fees" },
+      { id: "portal-reports", icon: "📈", name: "Reports" },
+      { id: "portal-materials", icon: "📚", name: "Courses" },
+      { id: "portal-profile", icon: "👤", name: "Profile" },
+      { id: "logout", icon: "🚪", name: "Logout" }
+    ];
+  };
+
+  const handleNavClick = (itemId) => {
+    if (itemId === "logout") {
+      handleLogout();
+      return;
+    }
+    if (itemId === "home" || itemId === "achievements" || itemId === "placement" || itemId === "contact") {
+      setActiveMenu(itemId);
+      return;
+    }
+    if (itemId === "courses") {
+      setActiveMenu("courses");
+      return;
+    }
+    if (itemId.startsWith("portal-")) {
+      const sub = itemId.replace("portal-", "");
+      setPortalTab(sub);
+      setActiveMenu("portal");
+      return;
+    }
+    setActiveMenu(itemId);
+  };
+
+  const isNavActive = (item) => {
+    if (item.id === "logout") return false;
+    if (activeMenu === "courses" && (item.id === "courses" || activeMenu === "cse-course")) {
+      return item.id === "courses";
+    }
+    if (activeMenu === item.id) return true;
+    if (activeMenu === "portal" && item.id.startsWith("portal-")) {
+      const sub = item.id.replace("portal-", "");
+      if (portalTab === sub) return true;
+      if (!portalTab) {
+        if (currentUser?.role === "student" && sub === "fees") return true;
+        if (currentUser?.role === "faculty" && sub === "attendance") return true;
+        if ((currentUser?.role === "college" || currentUser?.role === "admin") && sub === "students") return true;
+      }
+    }
+    return false;
+  };
+
+  // Department & Courses Data (13 academic programs)
   const departments = [
     {
       icon: "💻",
@@ -169,6 +239,11 @@ function App() {
     }
   ];
 
+  const currentRole = currentUser?.role?.toLowerCase() || "";
+  const isAdmin = currentRole === "college" || currentRole === "admin";
+  const isFaculty = currentRole === "faculty";
+  const isStudent = currentRole === "student";
+
   return (
     <div className="app">
       {/* ================= SIDEBAR ================= */}
@@ -177,20 +252,24 @@ function App() {
         <div className="sidebar-logo">
           <img src="/college-logo.png" alt="College Logo" />
           <h1>SVCET</h1>
-          <p>College Portal</p>
+          <p>
+            {currentUser
+              ? isAdmin
+                ? "Admin Portal"
+                : isFaculty
+                ? "Faculty Portal"
+                : "Student Portal"
+              : "College Portal"}
+          </p>
         </div>
 
-        {/* NAVIGATION MENU */}
+        {/* DYNAMIC ROLE NAVIGATION MENU */}
         <nav className="navigation">
-          {menuItems.map((item) => (
+          {getNavItems().map((item) => (
             <button
               key={item.id}
-              className={
-                activeMenu === item.id || (item.id === "courses" && activeMenu === "cse-course")
-                  ? "nav-item active"
-                  : "nav-item"
-              }
-              onClick={() => navigateTo(item.id)}
+              className={isNavActive(item) ? "nav-item active" : "nav-item"}
+              onClick={() => handleNavClick(item.id)}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-text">{item.name}</span>
@@ -198,7 +277,7 @@ function App() {
           ))}
         </nav>
 
-        {/* SIDEBAR BOTTOM */}
+        {/* SIDEBAR FOOTER */}
         <div className="sidebar-footer">
           <span>Learn</span>
           <span>|</span>
@@ -210,7 +289,7 @@ function App() {
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="main-content">
-        {/* ================= HEADER (ONE NAVBAR LOGIN) ================= */}
+        {/* ================= HEADER (NO GENERIC PORTAL BUTTON) ================= */}
         <header className="top-header">
           <div className="header-left">
             <img src="/college-logo.png" alt="College Logo" />
@@ -221,28 +300,28 @@ function App() {
           </div>
 
           <div className="header-right">
-            <p>An Autonomous Institution</p>
             {!currentUser ? (
-              activeMenu !== "login" && (
-                <button
-                  className="login-button"
-                  onClick={() => navigateTo("login")}
-                >
-                  Login
-                </button>
-              )
+              <>
+                <p>An Autonomous Institution</p>
+                {activeMenu !== "login" && (
+                  <button
+                    className="login-button"
+                    onClick={() => setActiveMenu("login")}
+                  >
+                    Login
+                  </button>
+                )}
+              </>
             ) : (
               <div className="header-logged-actions">
-                <button
-                  className="login-button"
-                  onClick={() => navigateTo("portal")}
-                >
-                  {currentUser.role === "college"
-                    ? "Admin Portal"
-                    : currentUser.role === "faculty"
-                    ? "Faculty Portal"
-                    : "Student Portal"}
-                </button>
+                <div className="header-user-badge">
+                  <span className="welcome-text">
+                    Welcome, <strong>{currentUser.name}</strong> ({currentUser.register_no || currentUser.userId || currentUser.user_id || "User"})
+                  </span>
+                  <span className={`role-pill role-${isAdmin ? "admin" : currentRole}`}>
+                    {isAdmin ? "ADMIN" : currentRole.toUpperCase()}
+                  </span>
+                </div>
                 <button
                   className="logout-button"
                   onClick={handleLogout}
@@ -257,7 +336,6 @@ function App() {
         {/* ================= HOME ================= */}
         {activeMenu === "home" && (
           <section id="home" className="hero-section">
-            {/* HERO TEXT */}
             <div className="hero-content">
               <div className="hero-tag">
                 <span>KNOWLEDGE</span>
@@ -283,13 +361,12 @@ function App() {
 
               <button
                 className="explore-button"
-                onClick={() => navigateTo("courses")}
+                onClick={() => setActiveMenu("courses")}
               >
                 Explore Courses →
               </button>
             </div>
 
-            {/* HERO IMAGE */}
             <div className="hero-image">
               <img src="college-campus.png" alt="College Campus" />
               <div className="slider-dots">
@@ -315,28 +392,23 @@ function App() {
               </button>
             </div>
 
-            {/* DEPARTMENT CARDS */}
             <div className="department-grid">
               {departments.map((department, index) => {
-                const isCSE = department.title === "Computer Science Engineering";
+                const isCse = department.title === "Computer Science Engineering";
                 return (
                   <div
-                    className={isCSE ? "department-card featured-cse" : "department-card"}
+                    className={`department-card ${isCse ? "department-card-cse" : ""}`}
                     key={index}
-                    onClick={() => {
-                      if (isCSE) navigateTo("cse-course");
-                    }}
                   >
-                    {isCSE && <span className="featured-pill">Curriculum & Materials Hub</span>}
-                    <div className="department-icon">{department.icon}</div>
+                    <div className="dept-icon-box">{department.icon}</div>
                     <h3>{department.title}</h3>
                     <p>{department.description}</p>
-                    {isCSE && (
+                    {isCse && (
                       <button
-                        className="explore-cse-btn"
+                        className="btn-cse-hub-launch"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigateTo("cse-course");
+                          setActiveMenu("cse-course");
                         }}
                       >
                         Explore Curriculum & Materials →
@@ -351,7 +423,7 @@ function App() {
 
         {/* ================= CSE COURSE & STUDY MATERIALS HUB ================= */}
         {activeMenu === "cse-course" && (
-          <CSECourseHub onBackToCourses={() => navigateTo("courses")} />
+          <CSECourseHub onBackToCourses={() => setActiveMenu("courses")} />
         )}
 
         {/* ================= ACHIEVEMENTS ================= */}
@@ -363,38 +435,32 @@ function App() {
               <p>Celebrating Decades of Academic Distinction, Innovation & Leadership</p>
             </div>
 
-            {/* STAT COUNTERS */}
             <div className="stats-container">
               <div className="stat-box">
                 <div>🎓</div>
                 <h2>6500+</h2>
                 <p>Students & Alumni</p>
               </div>
-
               <div className="stat-box">
                 <div>👨‍🏫</div>
                 <h2>280+</h2>
                 <p>Faculty (85+ Ph.D.)</p>
               </div>
-
               <div className="stat-box">
                 <div>🏢</div>
                 <h2>13+</h2>
                 <p>Accredited Programs</p>
               </div>
-
               <div className="stat-box">
                 <div>🏆</div>
                 <h2>180+</h2>
                 <p>National & State Awards</p>
               </div>
-
               <div className="stat-box">
                 <div>🔬</div>
                 <h2>50+</h2>
                 <p>Patents Filed & Granted</p>
               </div>
-
               <div className="stat-box">
                 <div>💼</div>
                 <h2>94.5%</h2>
@@ -402,7 +468,6 @@ function App() {
               </div>
             </div>
 
-            {/* MILESTONE HIGHLIGHT CARDS */}
             <div className="achievement-cards-grid">
               {achievementsList.map((item, idx) => (
                 <div className="achievement-card" key={idx}>
@@ -441,7 +506,6 @@ function App() {
                   <p>Placement Rate</p>
                 </div>
               </div>
-
               <div className="placement-card">
                 <span>₹</span>
                 <div>
@@ -449,12 +513,11 @@ function App() {
                   <p>Highest Package</p>
                 </div>
               </div>
-
               <div className="placement-card">
                 <span>🏢</span>
                 <div>
-                  <h2>100+</h2>
-                  <p>Recruiters</p>
+                  <h2>150+</h2>
+                  <p>Recruiting Partners</p>
                 </div>
               </div>
             </div>
@@ -464,74 +527,47 @@ function App() {
         {/* ================= CONTACT ================= */}
         {activeMenu === "contact" && (
           <section id="contact" className="contact-section">
-            <div className="contact-left">
-              <span className="small-heading">CONTACT</span>
-              <h2>Get In Touch</h2>
-              <p>We Would Love to Hear From You</p>
-
-              <div className="contact-details">
-                <div>
-                  <span>📍</span>
-                  <p>
-                    Thirupachur,
-                    <br />
-                    Thiruvallur TK,
-                    <br />
-                    Tamil Nadu - 631203
-                  </p>
-                </div>
-
-                <div>
-                  <span>📞</span>
-                  <p>+91 XXXXX XXXXX</p>
-                </div>
-
-                <div>
-                  <span>✉️</span>
-                  <p>info@svcet.edu.in</p>
-                </div>
+            <div className="contact-info">
+              <span className="small-heading">LOCATION</span>
+              <h2>Contact Us</h2>
+              <div className="info-item">
+                <span>📍</span>
+                <p>Sri Venkateswara College of Engineering and Technology, Chittoor Road, Tamil Nadu / AP Border, Pin - 517127</p>
               </div>
-
-              <button className="message-button">
-                Send Message →
-              </button>
+              <div className="info-item">
+                <span>📞</span>
+                <p>+91 8572 246339 / 246340</p>
+              </div>
+              <div className="info-item">
+                <span>✉️</span>
+                <p>principal@svcet.edu.in / admissions@svcet.edu.in</p>
+              </div>
             </div>
 
-            {/* MAP */}
             <div className="map-box">
               <div className="map-pin">📍</div>
             </div>
           </section>
         )}
 
-        {/* ================= PORTAL (AFTER LOGIN) ================= */}
+        {/* ================= SECURE ROLE-BASED PORTAL ROUTING ================= */}
         {activeMenu === "portal" && (
           currentUser ? (
-            currentUser.role === "college" ? (
-              <AdminPortal user={currentUser} />
-            ) : currentUser.role === "faculty" ? (
-              <TeacherPortal user={currentUser} />
+            isAdmin ? (
+              <AdminPortal user={currentUser} initialTab={portalTab || "students"} />
+            ) : isFaculty ? (
+              <TeacherPortal user={currentUser} initialTab={portalTab || "attendance"} />
             ) : (
-              <StudentPortal user={currentUser} />
+              <StudentPortal user={currentUser} initialTab={portalTab || "fees"} />
             )
           ) : (
-            <Login
-              onLoginSuccess={(user) => {
-                setCurrentUser(user);
-                setActiveMenu("portal");
-              }}
-            />
+            <Login onLoginSuccess={handleLoginSuccess} />
           )
         )}
 
         {/* ================= LOGIN ================= */}
         {activeMenu === "login" && (
-          <Login
-            onLoginSuccess={(user) => {
-              setCurrentUser(user);
-              setActiveMenu("portal");
-            }}
-          />
+          <Login onLoginSuccess={handleLoginSuccess} />
         )}
 
         {/* ================= FOOTER ================= */}

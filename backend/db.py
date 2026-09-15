@@ -127,6 +127,11 @@ class DatabaseManager:
                 password_hash VARCHAR(255) NOT NULL,
                 role VARCHAR(20) NOT NULL,
                 department VARCHAR(100),
+                phone VARCHAR(20) DEFAULT '',
+                batch VARCHAR(20) DEFAULT '2024-2028',
+                year INT DEFAULT 1,
+                semester INT DEFAULT 1,
+                section VARCHAR(10) DEFAULT 'A',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """,
@@ -137,6 +142,9 @@ class DatabaseManager:
                 name VARCHAR(100) NOT NULL,
                 department VARCHAR(100),
                 year INT DEFAULT 1,
+                semester INT DEFAULT 1,
+                section VARCHAR(10) DEFAULT 'A',
+                batch VARCHAR(20) DEFAULT '2024-2028',
                 email VARCHAR(100),
                 phone VARCHAR(20),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -263,26 +271,86 @@ class DatabaseManager:
         for stmt in schema:
             cursor.execute(stmt)
 
-        # Ensure subjects table has semester_id and credits columns
+        # Ensure subjects, students, and users have all required columns
         try:
             if is_mysql:
-                try:
-                    cursor.execute("ALTER TABLE subjects ADD COLUMN semester_id INT DEFAULT NULL")
-                except Exception:
-                    pass
-                try:
-                    cursor.execute("ALTER TABLE subjects ADD COLUMN credits INT DEFAULT 3")
-                except Exception:
-                    pass
+                # Subjects migrations
+                for col_stmt in [
+                    "ALTER TABLE subjects ADD COLUMN semester_id INT DEFAULT NULL",
+                    "ALTER TABLE subjects ADD COLUMN credits INT DEFAULT 3",
+                    "ALTER TABLE students ADD COLUMN semester INT DEFAULT 1",
+                    "ALTER TABLE students ADD COLUMN section VARCHAR(10) DEFAULT 'A'",
+                    "ALTER TABLE students ADD COLUMN batch VARCHAR(20) DEFAULT '2024-2028'",
+                    "ALTER TABLE users ADD COLUMN phone VARCHAR(20) DEFAULT ''",
+                    "ALTER TABLE users ADD COLUMN batch VARCHAR(20) DEFAULT '2024-2028'",
+                    "ALTER TABLE users ADD COLUMN year INT DEFAULT 1",
+                    "ALTER TABLE users ADD COLUMN semester INT DEFAULT 1",
+                    "ALTER TABLE users ADD COLUMN section VARCHAR(10) DEFAULT 'A'"
+                ]:
+                    try:
+                        cursor.execute(col_stmt)
+                    except Exception:
+                        pass
+
+                # Indexes
+                for idx_stmt in [
+                    "CREATE INDEX idx_students_reg ON students(register_no)",
+                    "CREATE INDEX idx_users_uid ON users(user_id)",
+                    "CREATE INDEX idx_att_reg ON attendance(register_no)",
+                    "CREATE INDEX idx_marks_reg ON marks(register_no)",
+                    "CREATE INDEX idx_fees_reg ON fees(register_no)",
+                    "CREATE INDEX idx_pay_reg ON payments(register_no)"
+                ]:
+                    try:
+                        cursor.execute(idx_stmt)
+                    except Exception:
+                        pass
             else:
+                # SQLite column checks
                 cursor.execute("PRAGMA table_info(subjects)")
-                existing_cols = [row[1] for row in cursor.fetchall()]
-                if 'semester_id' not in existing_cols:
+                existing_cols_sub = [row[1] for row in cursor.fetchall()]
+                if 'semester_id' not in existing_cols_sub:
                     cursor.execute("ALTER TABLE subjects ADD COLUMN semester_id INT DEFAULT NULL")
-                if 'credits' not in existing_cols:
+                if 'credits' not in existing_cols_sub:
                     cursor.execute("ALTER TABLE subjects ADD COLUMN credits INT DEFAULT 3")
+
+                cursor.execute("PRAGMA table_info(students)")
+                existing_cols_stu = [row[1] for row in cursor.fetchall()]
+                if 'semester' not in existing_cols_stu:
+                    cursor.execute("ALTER TABLE students ADD COLUMN semester INT DEFAULT 1")
+                if 'section' not in existing_cols_stu:
+                    cursor.execute("ALTER TABLE students ADD COLUMN section VARCHAR(10) DEFAULT 'A'")
+                if 'batch' not in existing_cols_stu:
+                    cursor.execute("ALTER TABLE students ADD COLUMN batch VARCHAR(20) DEFAULT '2024-2028'")
+
+                cursor.execute("PRAGMA table_info(users)")
+                existing_cols_usr = [row[1] for row in cursor.fetchall()]
+                if 'phone' not in existing_cols_usr:
+                    cursor.execute("ALTER TABLE users ADD COLUMN phone VARCHAR(20) DEFAULT ''")
+                if 'batch' not in existing_cols_usr:
+                    cursor.execute("ALTER TABLE users ADD COLUMN batch VARCHAR(20) DEFAULT '2024-2028'")
+                if 'year' not in existing_cols_usr:
+                    cursor.execute("ALTER TABLE users ADD COLUMN year INT DEFAULT 1")
+                if 'semester' not in existing_cols_usr:
+                    cursor.execute("ALTER TABLE users ADD COLUMN semester INT DEFAULT 1")
+                if 'section' not in existing_cols_usr:
+                    cursor.execute("ALTER TABLE users ADD COLUMN section VARCHAR(10) DEFAULT 'A'")
+
+                # Indexes for SQLite
+                for idx_stmt in [
+                    "CREATE INDEX IF NOT EXISTS idx_students_reg ON students(register_no)",
+                    "CREATE INDEX IF NOT EXISTS idx_users_uid ON users(user_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_att_reg ON attendance(register_no)",
+                    "CREATE INDEX IF NOT EXISTS idx_marks_reg ON marks(register_no)",
+                    "CREATE INDEX IF NOT EXISTS idx_fees_reg ON fees(register_no)",
+                    "CREATE INDEX IF NOT EXISTS idx_pay_reg ON payments(register_no)"
+                ]:
+                    try:
+                        cursor.execute(idx_stmt)
+                    except Exception:
+                        pass
         except Exception as err:
-            print(f"[Database] Notice on alter table subjects: {err}")
+            print(f"[Database] Notice on schema migrations: {err}")
 
         conn.commit()
         cursor.close()
