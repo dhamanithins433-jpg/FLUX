@@ -1153,4 +1153,73 @@ color: transparent;
   from {
     opacity: 0;
     transform: translateY(-4px)
-  }}
+  }
+}
+
+/* ================= DEMO CREDENTIALS STRIP ================= */
+.demo-credentials-strip {
+  background: #f0f4fa;
+  border: 1px dashed #092b5c;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+}
+
+.demo-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #092b5c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.demo-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.demo-btn {
+  flex: 1;
+  min-width: 85px;
+  padding: 7px 10px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.demo-btn:hover {
+  background: #092b5c;
+  color: #ffffff;
+  border-color: #092b5c;
+  transform: translateY(-1px);
+}
+
+.demo-btn.active {
+  background: #092b5c;
+  color: #ffffff;
+  border-color: #092b5c;
+  box-shadow: 0 2px 6px rgba(9, 43, 92, 0.25);
+}
+
+.login-error-alert {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}

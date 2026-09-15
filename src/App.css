@@ -205,6 +205,38 @@ body {
 }
 
 
+.nav-sub-item {
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffd86c;
+  margin-left: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s;
+  border-left: 3px solid #ffba1e;
+  text-align: left;
+}
+
+.nav-sub-item:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateX(4px);
+}
+
+.nav-sub-item.active {
+  background: linear-gradient(135deg, #ffb719, #ffd76a);
+  color: #08295a;
+  border-left: 3px solid #08295a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  font-weight: 700;
+}
+
+
 .nav-icon {
 
   font-size: 20px;
@@ -600,18 +632,9 @@ body {
 /* ================= DEPARTMENTS ================= */
 
 .department-grid {
-
   display: grid;
-
-  grid-template-columns:
-
-    repeat(
-      6,
-      1fr
-    );
-
-  gap: 15px;
-
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
 }
 
 
@@ -659,6 +682,55 @@ body {
       0.12
     );
 
+}
+
+.department-card.featured-cse {
+  border: 2px solid #092b5c;
+  background: linear-gradient(145deg, #ffffff, #f0f7ff);
+  box-shadow: 0 8px 20px rgba(9, 43, 92, 0.1);
+  position: relative;
+  cursor: pointer;
+}
+
+.department-card.featured-cse:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 32px rgba(9, 43, 92, 0.2);
+  border-color: #ffba1e;
+}
+
+.featured-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.explore-cse-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #092b5c, #153e79);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.explore-cse-btn:hover {
+  background: linear-gradient(135deg, #ffba1e, #ffd86c);
+  color: #092b5c;
 }
 
 
@@ -768,65 +840,113 @@ body {
 /* STATS */
 
 .stats-container {
-
   margin-top: 25px;
-
   display: grid;
-
-  grid-template-columns:
-
-    repeat(
-      4,
-      1fr
-    );
-
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
 }
 
+@media (max-width: 1100px) {
+  .stats-container {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 25px;
+  }
+}
+
+@media (max-width: 650px) {
+  .stats-container {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 20px;
+  }
+}
 
 .stat-box {
-
   text-align: center;
-
-  border-right:
-
-    1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.2
-    );
-
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0 10px;
 }
-
 
 .stat-box:last-child {
-
   border-right: none;
-
 }
-
 
 .stat-box div {
-
-  font-size: 25px;
-
+  font-size: 26px;
 }
-
 
 .stat-box h2 {
-
   color: #ffcc40;
-
   margin-top: 8px;
-
+  font-size: 24px;
 }
 
-
 .stat-box p {
+  font-size: 11.5px;
+  color: #d5deea;
+  margin-top: 4px;
+}
 
-  font-size: 11px;
+/* MILESTONES & AWARDS CARDS */
 
+.achievement-cards-grid {
+  margin-top: 35px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.achievement-card {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  padding: 22px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.achievement-card:hover {
+  transform: translateY(-6px);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 204, 64, 0.5);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.achievement-card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.achievement-card-icon {
+  font-size: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 204, 64, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.achievement-card-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #ffcc40;
+}
+
+.achievement-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.achievement-card p {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #d5deea;
 }
 
 
@@ -1411,4 +1531,1350 @@ body {
 
   }
 
+}
+
+/* ================= LOGGED IN HEADER ACTIONS ================= */
+.header-logged-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logout-button {
+  background: #ffffff;
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.logout-button:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  transform: translateY(-2px);
+}
+
+/* Portal Layout */
+.portal-container {
+  padding: 30px 40px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.portal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.portal-header h2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #092b5c;
+  margin-top: 4px;
+}
+
+.portal-header p {
+  color: #6b7280;
+  font-size: 13.5px;
+  margin-top: 4px;
+}
+
+.portal-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.portal-pill.admin {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.portal-pill.teacher {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.portal-pill.student {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.alert-banner {
+  padding: 12px 18px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.alert-banner.success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.alert-banner.warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 25px;
+}
+
+.stat-card {
+  background: #ffffff;
+  padding: 20px 22px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-icon {
+  font-size: 28px;
+  background: #f3f6fa;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+  margin-top: 2px;
+}
+
+.text-green { color: #16a34a !important; }
+.text-red { color: #dc2626 !important; }
+.text-amber { color: #d97706 !important; }
+.text-blue { color: #2563eb !important; }
+.font-semibold { font-weight: 600; }
+
+/* Tabs */
+.portal-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 22px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: #092b5c;
+}
+
+.tab-btn.active {
+  color: #092b5c;
+  border-bottom-color: #092b5c;
+}
+
+/* Card Container */
+.portal-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.portal-cards-row {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.flex-2 { flex: 2; min-width: 340px; }
+.flex-1 { flex: 1; min-width: 300px; }
+
+.card-top-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.card-top-title h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #092b5c;
+}
+
+.card-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 7px 12px;
+  gap: 8px;
+  width: 320px;
+}
+
+.search-box input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 13px;
+  outline: none;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.filter-group select,
+.filter-item select,
+.filter-item input {
+  padding: 7px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  background: #ffffff;
+}
+
+/* Table */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.portal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.portal-table th {
+  background: #f8fafc;
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.portal-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1f2937;
+}
+
+.portal-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Badges */
+.badge-paid {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.badge-partial {
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.badge-due {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.dept-tag {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.cgpa-pill {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #092b5c;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: #061a3d;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 7px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-collect {
+  background: #092b5c;
+  color: #ffffff;
+  border: none;
+}
+
+.btn-collect:hover {
+  background: #061a3d;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #092b5c;
+  color: #092b5c;
+}
+
+.btn-outline:hover {
+  background: #f0f4fa;
+}
+
+.btn-lg {
+  padding: 12px 24px;
+  font-size: 15px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Filter Bar for Teacher */
+.class-filter-bar {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 20px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-item label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+}
+
+.attendance-summary-bar {
+  display: flex;
+  gap: 20px;
+  background: #f0f4fa;
+  padding: 12px 18px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.attendance-summary-bar span {
+  font-size: 12px;
+  color: #4b5563;
+  margin-right: 4px;
+}
+
+/* Attendance Toggle Buttons */
+.attendance-toggle-group {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-status {
+  padding: 5px 10px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-status.present.active {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+.btn-status.late.active {
+  background: #d97706;
+  color: white;
+  border-color: #d97706;
+}
+
+.btn-status.absent.active {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+
+.remarks-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.table-action-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.table-action-footer p {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Marks input */
+.marks-input-cell {
+  width: 75px;
+  padding: 6px 8px;
+  border: 1.5px solid #092b5c;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.grade-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.grade-O { background: #dcfce7; color: #166534; }
+.grade-A\+ { background: #dbeafe; color: #1e40af; }
+.grade-A { background: #e0f2fe; color: #0369a1; }
+.grade-B\+ { background: #fef3c7; color: #92400e; }
+.grade-B { background: #ffedd5; color: #9a3412; }
+.grade-RA { background: #fee2e2; color: #991b1b; }
+
+/* Student Fee Breakdown */
+.fee-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.fee-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fee-item span {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.fee-item strong {
+  font-size: 18px;
+  color: #0f172a;
+  margin-top: 4px;
+}
+
+.fee-total-summary {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+  color: #334155;
+}
+
+.summary-row.highlight {
+  border-top: 1.5px dashed #cbd5e1;
+  margin-top: 6px;
+  padding-top: 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.card-bottom-action {
+  margin-top: 10px;
+}
+
+/* Payment History Cards */
+.payment-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-history-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.history-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.history-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 10px;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.portal-modal {
+  background: #ffffff;
+  width: 100%;
+  max-width: 540px;
+  border-radius: 14px;
+  padding: 26px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.checkout-modal {
+  max-width: 580px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.modal-header h3 {
+  font-size: 19px;
+  font-weight: 800;
+  color: #092b5c;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  background: #ffffff;
+}
+
+.student-fee-mini-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.payment-method-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.method-btn {
+  padding: 10px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.method-btn.active {
+  border-color: #092b5c;
+  background: #f0f4fa;
+  color: #092b5c;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.checkout-summary-strip {
+  display: flex;
+  justify-content: space-between;
+  background: #f1f5f9;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.security-notice {
+  font-size: 11.5px;
+  color: #64748b;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.modal-form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.modal-form-actions button {
+  flex: 1;
+}
+
+/* =======================================================
+   OFFICIAL RECEIPT MODAL & PRINT STYLES
+======================================================= */
+.receipt-modal {
+  background: #ffffff;
+  width: 100%;
+  max-width: 720px;
+  border-radius: 14px;
+  padding: 36px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 2px solid #092b5c;
+}
+
+.receipt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.receipt-logo-wrap {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.receipt-logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.receipt-logo-wrap h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #092b5c;
+  margin: 0;
+}
+
+.receipt-logo-wrap h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 2px 0;
+}
+
+.receipt-sub {
+  font-size: 10.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.receipt-address {
+  font-size: 10.5px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.receipt-badge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.official-receipt-badge {
+  background: #092b5c;
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.8px;
+}
+
+.payment-status-pill.success {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.receipt-divider {
+  height: 2px;
+  background: #e2e8f0;
+  margin: 18px 0;
+}
+
+.receipt-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  margin-bottom: 16px;
+}
+
+.meta-label {
+  color: #64748b;
+  margin-right: 6px;
+}
+
+.receipt-student-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.receipt-student-box h4 {
+  font-size: 12px;
+  font-weight: 800;
+  color: #092b5c;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.student-info-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.receipt-table th {
+  background: #092b5c;
+  color: white;
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.receipt-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.receipt-table tfoot td {
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+.receipt-balance-row td {
+  border-top: 1px solid #cbd5e1;
+}
+
+.receipt-total-row td {
+  background: #f1f5f9;
+  border-top: 2px solid #092b5c;
+}
+
+.receipt-footer-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.receipt-terms {
+  font-size: 10.5px;
+  color: #64748b;
+  max-width: 360px;
+}
+
+.receipt-terms p {
+  margin: 2px 0;
+}
+
+.receipt-seal {
+  text-align: center;
+}
+
+.seal-circle {
+  width: 76px;
+  height: 76px;
+  border: 2px dashed #092b5c;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #092b5c;
+  margin: 0 auto 4px;
+}
+
+.seal-circle strong {
+  font-size: 8.5px;
+  color: #16a34a;
+}
+
+.receipt-seal p {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-print {
+  flex: 2;
+  background: #092b5c;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-close {
+  flex: 1;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Print specific styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-area, .printable-area * {
+    visibility: visible;
+  }
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .non-printable {
+    display: none !important;
+  }
+}
+
+/* =======================================================
+   STUDENT PORTAL: AFTER LOGIN QR PAYMENT METHOD
+======================================================= */
+.btn-qr-header-action {
+  background: #16a34a !important;
+  border: 1.5px solid #86efac !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3) !important;
+  font-weight: 800 !important;
+}
+
+.btn-qr-header-action:hover {
+  background: #15803d !important;
+  transform: translateY(-1px);
+}
+
+/* QUICK QR ALERT STRIP ON STUDENT DASHBOARD */
+.portal-quick-qr-alert {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1.5px solid #10b981;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.qr-alert-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.qr-alert-fire {
+  font-size: 28px;
+  background: #10b981;
+  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.qr-alert-content strong {
+  font-size: 15px;
+  color: #065f46;
+  display: block;
+}
+
+.qr-alert-content p {
+  font-size: 13px;
+  color: #047857;
+  margin: 2px 0 0;
+}
+
+.btn-qr-alert-go {
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
+.btn-qr-alert-go:hover {
+  background: #047857;
+  transform: translateY(-1px);
+}
+
+/* QR TAB BUTTON HIGHLIGHT */
+.qr-tab-btn {
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-color: #86efac !important;
+  font-weight: 800 !important;
+}
+
+.qr-tab-btn.active {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
+}
+
+/* MAIN QR PAYMENT CONSOLE */
+.qr-main-console-card {
+  background: #ffffff;
+  border: 2px solid #10b981;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.08);
+}
+
+.qr-pay-split-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 32px;
+  margin-top: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .qr-pay-split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* LEFT QR CODE SHOWCASE */
+.qr-code-showcase-box {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.qr-frame-wrapper {
+  background: #ffffff;
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.showcase-qr-img {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  display: block;
+  border-radius: 8px;
+}
+
+.qr-live-pulse-badge {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #065f46;
+  font-weight: 700;
+}
+
+.pulse-dot-green {
+  width: 9px;
+  height: 9px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse-dot 1.2s infinite;
+}
+
+.qr-metadata-card {
+  width: 100%;
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.meta-item {
+  font-size: 12.5px;
+}
+
+.meta-item .lbl {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  display: block;
+}
+
+.meta-item .val {
+  color: #0f172a;
+  font-size: 14.5px;
+  font-weight: 800;
+}
+
+.copy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.copy-row code {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #092b5c;
+  flex: 1;
+}
+
+.btn-copy-action {
+  background: #092b5c;
+  color: #ffffff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-copy-action:hover {
+  background: #1e40af;
+}
+
+.btn-open-upi-app {
+  background: #10b981;
+  color: #ffffff;
+  text-align: center;
+  padding: 11px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  margin-top: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  display: block;
+}
+
+.btn-open-upi-app:hover {
+  background: #059669;
+}
+
+/* RIGHT: REAL-TIME LEDGER & CONFIRMATION FORM */
+.qr-confirmation-box {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.student-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.strip-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 12.5px;
+}
+
+.strip-item span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.strip-item strong {
+  color: #0f172a;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.strip-item.highlight-due {
+  border-left: 3px solid #ef4444;
+  padding-left: 10px;
+}
+
+.inline-upi-payment-form {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.inline-upi-payment-form h4 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #092b5c;
+  margin: 0 0 6px;
+}
+
+.form-helper {
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.form-action-row {
+  margin-top: 20px;
+}
+
+.secure-badge-note {
+  font-size: 11.5px;
+  color: #64748b;
+  text-align: center;
+  margin-top: 14px;
 }

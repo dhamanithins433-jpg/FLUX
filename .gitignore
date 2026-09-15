@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Environment variables
+backend/.env
+
+# Python cache
+backend/__pycache__/
+*.pyc
+
+# SQLite database
+backend/college_portal.sqlite3
+
+# Node modules
+node_modules/
