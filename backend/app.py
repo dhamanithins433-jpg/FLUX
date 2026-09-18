@@ -1620,6 +1620,20 @@ def faculty_save_marks(current_user):
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
+# ----------------- HEALTH CHECK ENDPOINT -----------------
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint returning system & database connection status.
+    Verifies that Flask is connected to the database safely without leaking credentials.
+    """
+    try:
+        health_info = db.check_health()
+        return jsonify(health_info), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'database': 'disconnected', 'message': str(e)}), 500
+
 # ----------------- COURSES & CURRICULUM ENDPOINTS -----------------
 
 @app.route('/api/courses', methods=['GET'])
@@ -1677,6 +1691,97 @@ def get_cse_regulations():
         return jsonify({'regulations': regulations or []}), 200
     except Exception as e:
         return jsonify({'message': str(e)}), 500
+
+@app.route('/api/courses/<course_code>', methods=['GET'])
+def get_department_course(course_code):
+    try:
+        code_upper = course_code.strip().upper()
+        # Fast path for CSE
+        if code_upper == 'CSE':
+            return get_cse_course()
+
+        course = db.execute_query(
+            "SELECT * FROM courses WHERE UPPER(code) = ? OR UPPER(name) LIKE ? OR UPPER(department) LIKE ?",
+            (code_upper, f"%{code_upper}%", f"%{code_upper}%"),
+            fetch_one=True
+        )
+        if not course:
+            return jsonify({'message': f'Department {course_code} not found'}), 404
+
+        regulations = db.execute_query(
+            "SELECT * FROM regulations WHERE course_id = ? ORDER BY year DESC",
+            (course['id'],), fetch_all=True
+        ) or []
+
+        total_subjects = db.execute_query(
+            """
+            SELECT COUNT(DISTINCT s.id) as cnt
+            FROM subjects s
+            LEFT JOIN semesters sem ON s.semester_id = sem.id
+            LEFT JOIN regulations r ON sem.regulation_id = r.id
+            WHERE r.course_id = ? OR s.department LIKE ?
+            """,
+            (course['id'], f"%{course['department']}%"),
+            fetch_one=True
+        )['cnt']
+
+        total_materials = db.execute_query(
+            """
+            SELECT COUNT(DISTINCT m.id) as cnt
+            FROM study_materials m
+            JOIN subjects s ON m.subject_id = s.id
+            LEFT JOIN semesters sem ON s.semester_id = sem.id
+            LEFT JOIN regulations r ON sem.regulation_id = r.id
+            WHERE r.course_id = ? OR s.department LIKE ?
+            """,
+            (course['id'], f"%{course['department']}%"),
+            fetch_one=True
+        )['cnt']
+
+        return jsonify({
+            'course': course,
+            'regulations': regulations,
+            'stats': {
+                'total_regulations': len(regulations),
+                'total_subjects': total_subjects,
+                'total_materials': total_materials,
+                'accreditation': "Anna University Affiliated & AICTE Approved"
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/courses/<course_code>/regulations', methods=['GET'])
+def get_department_regulations(course_code):
+    try:
+        code_upper = course_code.strip().upper()
+        if code_upper == 'CSE':
+            return get_cse_regulations()
+
+        course = db.execute_query(
+            "SELECT id FROM courses WHERE UPPER(code) = ? OR UPPER(name) LIKE ? OR UPPER(department) LIKE ?",
+            (code_upper, f"%{code_upper}%", f"%{code_upper}%"),
+            fetch_one=True
+        )
+        if not course:
+            return jsonify({'message': f'Department {course_code} not found'}), 404
+
+        regulations = db.execute_query(
+            "SELECT * FROM regulations WHERE course_id = ? ORDER BY year DESC",
+            (course['id'],), fetch_all=True
+        )
+        return jsonify({'regulations': regulations or []}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+# Route aliases for CSE regulation and semester sub-paths (supporting AdminPortal.jsx)
+@app.route('/api/courses/cse/regulations/<int:reg_id>/semesters', methods=['GET'])
+def get_cse_reg_semesters_alias(reg_id):
+    return get_regulation_semesters(str(reg_id))
+
+@app.route('/api/courses/cse/semesters/<int:semester_id>/subjects', methods=['GET'])
+def get_cse_sem_subjects_alias(semester_id):
+    return get_semester_subjects(semester_id)
 
 @app.route('/api/regulations/<reg_identifier>/semesters', methods=['GET'])
 def get_regulation_semesters(reg_identifier):
@@ -1887,6 +1992,167 @@ def search_cse_content():
             'subjects': subjects,
             'materials': materials
         }), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/courses/<course_code>/search', methods=['GET'])
+def search_department_content(course_code):
+    try:
+        q = request.args.get('q', '').strip()
+        if not q:
+            return jsonify({'subjects': [], 'materials': []}), 200
+
+        code_upper = course_code.strip().upper()
+        if code_upper == 'CSE':
+            return search_cse_content()
+
+        course = db.execute_query(
+            "SELECT * FROM courses WHERE UPPER(code) = ? OR UPPER(name) LIKE ? OR UPPER(department) LIKE ?",
+            (code_upper, f"%{code_upper}%", f"%{code_upper}%"),
+            fetch_one=True
+        )
+        course_id = course['id'] if course else None
+
+        search_terms = [q]
+        lower_q = q.lower()
+        sub_clauses = []
+        sub_params = []
+        for term in search_terms:
+            wild = f"%{term}%"
+            sub_clauses.append("(s.subject_code LIKE ? OR s.subject_name LIKE ?)")
+            sub_params.extend([wild, wild])
+
+        where_sub = " OR ".join(sub_clauses)
+        dept_filter = ""
+        dept_params = []
+        if course_id:
+            dept_filter = " AND (r.course_id = ? OR s.department LIKE ?)"
+            dept_params = [course_id, f"%{course['department']}%"]
+
+        subjects = db.execute_query(
+            f"""
+            SELECT DISTINCT s.*, sem.semester_number, sem.title as semester_title, r.name as regulation_name
+            FROM subjects s
+            LEFT JOIN semesters sem ON s.semester_id = sem.id
+            LEFT JOIN regulations r ON sem.regulation_id = r.id
+            WHERE ({where_sub}){dept_filter}
+            ORDER BY s.semester ASC, s.subject_code ASC
+            """,
+            sub_params + dept_params,
+            fetch_all=True
+        ) or []
+
+        matched_subj_ids = [s['id'] for s in subjects]
+        mat_clauses = []
+        mat_params = []
+        for term in search_terms:
+            wild = f"%{term}%"
+            mat_clauses.append("(m.title LIKE ? OR m.source LIKE ? OR m.material_type LIKE ? OR m.unit LIKE ?)")
+            mat_params.extend([wild, wild, wild, wild])
+
+        if matched_subj_ids:
+            placeholders = ','.join(['?'] * len(matched_subj_ids))
+            mat_where = f"({' OR '.join(mat_clauses)}) OR m.subject_id IN ({placeholders})"
+            mat_params.extend(matched_subj_ids)
+        else:
+            mat_where = " OR ".join(mat_clauses)
+
+        materials = db.execute_query(
+            f"""
+            SELECT DISTINCT m.*, s.subject_code, s.subject_name, s.semester_id
+            FROM study_materials m
+            JOIN subjects s ON m.subject_id = s.id
+            LEFT JOIN semesters sem ON s.semester_id = sem.id
+            LEFT JOIN regulations r ON sem.regulation_id = r.id
+            WHERE ({mat_where}){dept_filter}
+            ORDER BY m.material_type ASC
+            """,
+            mat_params + dept_params,
+            fetch_all=True
+        ) or []
+
+        return jsonify({
+            'query': q,
+            'department': course_code,
+            'total_matches': len(subjects) + len(materials),
+            'subjects': subjects,
+            'materials': materials
+        }), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+# ----------------- ADMIN SUBJECT MANAGEMENT -----------------
+
+@app.route('/api/subjects', methods=['POST'])
+def add_subject():
+    try:
+        data = request.get_json() or {}
+        code = data.get('subject_code', '').strip().upper()
+        name = data.get('subject_name', '').strip()
+        dept = data.get('department', '').strip() or 'Computer Science Engineering'
+        semester = int(data.get('semester', 1))
+        semester_id = data.get('semester_id')
+        credits = int(data.get('credits', 3))
+
+        if not code or not name:
+            return jsonify({'message': 'Subject code and name are required.'}), 400
+
+        existing = db.execute_query("SELECT id FROM subjects WHERE subject_code = ?", (code,), fetch_one=True)
+        if existing:
+            return jsonify({'message': f'Subject with code {code} already exists.'}), 409
+
+        sub_id = db.execute_query(
+            """
+            INSERT INTO subjects (subject_code, subject_name, department, semester, semester_id, credits)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (code, name, dept, semester, semester_id, credits),
+            commit=True
+        )
+
+        new_sub = db.execute_query("SELECT * FROM subjects WHERE id = ?", (sub_id,), fetch_one=True)
+        return jsonify({'message': 'Subject created successfully.', 'subject': new_sub}), 201
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/subjects/<int:subject_id>', methods=['PUT'])
+def update_subject(subject_id):
+    try:
+        data = request.get_json() or {}
+        existing = db.execute_query("SELECT * FROM subjects WHERE id = ?", (subject_id,), fetch_one=True)
+        if not existing:
+            return jsonify({'message': 'Subject not found'}), 404
+
+        name = data.get('subject_name', existing['subject_name']).strip()
+        dept = data.get('department', existing['department']).strip()
+        semester = int(data.get('semester', existing.get('semester', 1)))
+        credits = int(data.get('credits', existing.get('credits', 3)))
+
+        db.execute_query(
+            """
+            UPDATE subjects
+            SET subject_name = ?, department = ?, semester = ?, credits = ?
+            WHERE id = ?
+            """,
+            (name, dept, semester, credits, subject_id),
+            commit=True
+        )
+
+        updated = db.execute_query("SELECT * FROM subjects WHERE id = ?", (subject_id,), fetch_one=True)
+        return jsonify({'message': 'Subject updated successfully.', 'subject': updated}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/subjects/<int:subject_id>', methods=['DELETE'])
+def delete_subject(subject_id):
+    try:
+        existing = db.execute_query("SELECT * FROM subjects WHERE id = ?", (subject_id,), fetch_one=True)
+        if not existing:
+            return jsonify({'message': 'Subject not found'}), 404
+
+        db.execute_query("DELETE FROM study_materials WHERE subject_id = ?", (subject_id,), commit=True)
+        db.execute_query("DELETE FROM subjects WHERE id = ?", (subject_id,), commit=True)
+        return jsonify({'message': 'Subject deleted successfully.'}), 200
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 

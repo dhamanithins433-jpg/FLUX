@@ -53,6 +53,22 @@ class DatabaseManager:
             print("[Database] mysql-connector-python not available, using SQLite.")
         self.use_mysql = False
 
+    def check_health(self):
+        status = {
+            "status": "healthy",
+            "database": "connected" if self.use_mysql else "fallback_sqlite",
+            "engine": "MySQL 8.x" if self.use_mysql else "SQLite 3",
+            "sqlite_file": str(self.sqlite_path)
+        }
+        try:
+            row = self.execute_query("SELECT 1 as ping", fetch_one=True)
+            status["ping"] = "pong" if row else "fail"
+        except Exception as e:
+            status["status"] = "degraded"
+            status["database"] = "error"
+            status["error"] = str(e)
+        return status
+
     def get_connection(self):
         if self.use_mysql:
             try:
@@ -788,6 +804,13 @@ class DatabaseManager:
                 ]
                 for m in ds_materials:
                     self.execute_query("INSERT INTO study_materials (subject_id, title, material_type, unit, url, source, academic_year) VALUES (?, ?, ?, ?, ?, ?, ?)", m, commit=True)
+
+        # 12. Seed Multi-Department Curricula (IT, ECE, EEE, MECH, CIVIL, AIDS, etc.)
+        try:
+            import curriculum_data
+            curriculum_data.seed_all_curriculum(self)
+        except Exception as err:
+            print(f"[Database] Warning seeding multi-department curriculum: {err}")
 
         print("[Database] Schema and seed data successfully verified.")
 

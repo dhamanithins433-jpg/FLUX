@@ -4,6 +4,7 @@ import AdminPortal from "./components/AdminPortal";
 import TeacherPortal from "./components/TeacherPortal";
 import StudentPortal from "./components/StudentPortal";
 import CSECourseHub from "./components/courses/CSECourseHub";
+import DepartmentCourseHub from "./components/courses/DepartmentCourseHub";
 import React from "react";
 
 import "./App.css";
@@ -24,6 +25,7 @@ function App() {
   });
 
   const [activeMenu, setActiveMenu] = useState("home");
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
 
   const handleLogout = () => {
     localStorage.removeItem("svcet_token");
@@ -69,71 +71,85 @@ function App() {
   // Department & Courses Data (Expanded list of 13 academic programs)
   const departments = [
     {
+      code: "CSE",
       icon: "💻",
       title: "Computer Science Engineering",
       description: "Learn programming, artificial intelligence, cloud architectures, cybersecurity, and modern technologies."
     },
     {
+      code: "AIDS",
       icon: "🤖",
       title: "AI & Data Science",
       description: "Master machine learning algorithms, deep neural networks, computer vision, NLP, and big data systems."
     },
     {
+      code: "IT",
       icon: "🖥️",
       title: "Information Technology",
       description: "Build robust enterprise software, full-stack systems, cloud architectures, and DevOps pipelines."
     },
     {
+      code: "CSBS",
       icon: "📊",
       title: "AI & machine learning",
       description: "TCS-curated curriculum blending digital computing technologies with financial and business analytics."
     },
     {
+      code: "CYBER",
       icon: "🛡️",
       title: "Cyber Security",
       description: "Specialized defense curriculum in ethical hacking, cryptography, threat intelligence, and digital forensics."
     },
     {
+      code: "ECE",
       icon: "📡",
       title: "Electronics & Communication",
       description: "Explore VLSI chip design, embedded microcontrollers, satellite communications, and IoT sensor systems."
     },
     {
+      code: "EEE",
       icon: "⚡",
       title: "Electrical & Electronics",
       description: "Power electronics, smart electric grid systems, renewable solar/wind energy, and EV powertrain design."
     },
     {
+      code: "MECH",
       icon: "⚙️",
       title: "Mechanical Engineering",
       description: "Robotics, automation, mechatronics, CAD/CAM modeling, finite element analysis, and Industry 4.0."
     },
     {
+      code: "CIVIL",
       icon: "🏢",
       title: "Civil Engineering",
       description: "Smart infrastructure design, structural analysis, green building architecture, and modern geoinformatics."
     },
     {
+      code: "BME",
       icon: "🔋",
       title: "M.E. Power Electronics & Drives",
       description: "Genetic engineering, bio-sensors, biomedical instrumentation, bioinformatics, and healthcare AI."
     },
     {
+      code: "ME-CSE",
       icon: "🔬",
       title: "M.E. Computer Science and Engineering",
       description: "Postgraduate research program in advanced distributed algorithms, high-performance computing, and AI."
     },
     {
+      code: "MBA",
       icon: "📈",
       title: "Master of Business Administration (MBA)",
       description: "Executive management program covering Finance, Human Resources, Digital Marketing, and Operations."
     },
     {
+      code: "MCA",
       icon: "📱",
       title: "Master of Computer Applications (MCA)",
       description: "Advanced applications engineering, modern cloud platforms, mobile app architecture, and IT systems."
     },
     {
+      code: "ECE",
       icon: "🔌",
       title: "M.E.VLSI Design",
       description: "Advanced applications engineering, modern cloud platforms, mobile app architecture, and IT systems."
@@ -329,30 +345,39 @@ function App() {
             {/* DEPARTMENT CARDS */}
             <div className="department-grid">
               {departments.map((department, index) => {
-                const isCSE = department.title === "Computer Science Engineering";
+                const isCSE = department.title === "Computer Science Engineering" || department.code === "CSE";
                 return (
                   <div
-                    className={isCSE ? "department-card featured-cse" : "department-card"}
+                    className="department-card featured-cse"
                     key={index}
                     onClick={() => {
-                      if (isCSE) navigateTo("cse-course");
+                      if (isCSE) {
+                        navigateTo("cse-course");
+                      } else {
+                        setSelectedDepartment(department);
+                        navigateTo("department-course");
+                      }
                     }}
+                    style={{ cursor: "pointer" }}
                   >
-                    {isCSE && <span className="featured-pill">Curriculum & Materials Hub</span>}
+                    <span className="featured-pill">Curriculum & Materials Hub</span>
                     <div className="department-icon">{department.icon}</div>
                     <h3>{department.title}</h3>
                     <p>{department.description}</p>
-                    {isCSE && (
-                      <button
-                        className="explore-cse-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                    <button
+                      className="explore-cse-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isCSE) {
                           navigateTo("cse-course");
-                        }}
-                      >
-                        Explore Curriculum & Materials →
-                      </button>
-                    )}
+                        } else {
+                          setSelectedDepartment(department);
+                          navigateTo("department-course");
+                        }
+                      }}
+                    >
+                      Explore Curriculum & Materials →
+                    </button>
                   </div>
                 );
               })}
@@ -363,6 +388,15 @@ function App() {
         {/* ================= CSE COURSE & STUDY MATERIALS HUB ================= */}
         {activeMenu === "cse-course" && (
           <CSECourseHub onBackToCourses={() => navigateTo("courses")} />
+        )}
+
+        {/* ================= MULTI-DEPARTMENT COURSE & STUDY MATERIALS HUB ================= */}
+        {activeMenu === "department-course" && selectedDepartment && (
+          <DepartmentCourseHub
+            courseCode={selectedDepartment.code}
+            courseName={selectedDepartment.title}
+            onBackToCourses={() => navigateTo("courses")}
+          />
         )}
 
         {/* ================= ACHIEVEMENTS ================= */}
