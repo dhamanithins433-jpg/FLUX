@@ -2201,11 +2201,115 @@ body {
 }
 
 
+/* PREMIUM SOCIAL ICONS */
+
 .social-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.social-icon {
+  width: 44px;
+  height: 44px;
 
   display: flex;
+  align-items: center;
+  justify-content: center;
 
-  gap: 10px;
+  border-radius: 14px;
+
+  color: #ffffff;
+  font-size: 20px;
+
+  text-decoration: none;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  border: 1px solid rgba(255, 255, 255, 0.16);
+
+  backdrop-filter: blur(12px);
+
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease;
+}
+
+/* FACEBOOK */
+
+.social-icon.facebook:hover {
+  background: #1877f2;
+
+  transform: translateY(-6px) scale(1.05);
+
+  box-shadow:
+    0 8px 25px rgba(24, 119, 242, 0.45);
+}
+
+/* INSTAGRAM */
+
+.social-icon.instagram:hover {
+  background: linear-gradient(
+    135deg,
+    #833ab4,
+    #fd1d1d,
+    #fcb045
+  );
+
+  transform: translateY(-6px) scale(1.05);
+
+  box-shadow:
+    0 8px 25px rgba(225, 48, 108, 0.45);
+}
+
+/* YOUTUBE */
+
+.social-icon.youtube:hover {
+  background: #ff0000;
+
+  transform: translateY(-6px) scale(1.05);
+
+  box-shadow:
+    0 8px 25px rgba(255, 0, 0, 0.45);
+}
+
+/* CLICK EFFECT */
+
+.social-icon:active {
+  transform: scale(0.92);
+}
+
+/* COPYRIGHT */
+
+.footer-right p {
+  margin: 0;
+
+  font-size: 13px;
+
+  color: rgba(255, 255, 255, 0.65);
+
+  letter-spacing: 0.4px;
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+
+  .social-icons {
+    gap: 12px;
+  }
+
+  .social-icon {
+    width: 40px;
+    height: 40px;
+
+    font-size: 18px;
+
+    border-radius: 12px;
+  }
 
 }
 

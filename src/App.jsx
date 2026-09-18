@@ -4,8 +4,14 @@ import AdminPortal from "./components/AdminPortal";
 import TeacherPortal from "./components/TeacherPortal";
 import StudentPortal from "./components/StudentPortal";
 import CSECourseHub from "./components/courses/CSECourseHub";
+import React from "react";
 
 import "./App.css";
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaYoutube
+} from "react-icons/fa";
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -978,14 +984,47 @@ function App() {
           </div>
 
           <div className="footer-right">
-            <div className="social-icons">
-              <span>f</span>
-              <span>◎</span>
-              <span>in</span>
-              <span>▶</span>
-            </div>
-            <p>© 2026 SVCET. All Rights Reserved.</p>
-          </div>
+
+  <div className="social-icons">
+
+    {/* FACEBOOK */}
+    <a
+      href="https://www.facebook.com/share/18K1Yr1ZTq/"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="SVCET Facebook"
+      className="social-icon facebook"
+    >
+      <FaFacebookF />
+    </a>
+
+    {/* INSTAGRAM */}
+    <a
+      href="https://www.instagram.com/svcetthirupachur?stkn=Ymp0dHlqdzQ1YzBt"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="SVCET Instagram"
+      className="social-icon instagram"
+    >
+      <FaInstagram />
+    </a>
+
+    {/* YOUTUBE */}
+    <a
+      href="https://www.youtube.com/@svcet_thirupachur"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="SVCET YouTube"
+      className="social-icon youtube"
+    >
+      <FaYoutube />
+    </a>
+
+  </div>
+
+  <p>© 2026 SVCET. All Rights Reserved.</p>
+
+</div>
         </footer>
       </main>
     </div>
