@@ -34,3 +34,5 @@ backend/college_portal.sqlite3
 
 # Node modules
 node_modules/
+__pycache__/
+*.pyc
