@@ -462,7 +462,7 @@ function Login({ onLoginSuccess }) {
             </div>
 
             <button type="submit" className="main-login-btn" disabled={isSubmitting}>
-              {isSubmitting ? "Verifying Credentials..." : "Login to Portal"}
+              {isSubmitting ? "Verifying Credentials..." : "Login"}
               <span>→</span>
             </button>
 
