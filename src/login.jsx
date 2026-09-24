@@ -117,6 +117,38 @@ function Login({ onLoginSuccess }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError("");
+
+    const uid = (loginData.userId || "").trim();
+    const pwd = loginData.password || "";
+
+    let hasEmpty = false;
+    if (!uid) {
+      setRegisterNumberError(true);
+      hasEmpty = true;
+    } else {
+      setRegisterNumberError(false);
+    }
+
+    if (!pwd) {
+      setPasswordError(true);
+      hasEmpty = true;
+    } else {
+      setPasswordError(false);
+    }
+
+    const fieldLabel = role === "student" ? "Register Number" : role === "faculty" ? "Faculty ID" : "Administrator ID";
+
+    if (hasEmpty) {
+      if (!uid && !pwd) {
+        setLoginError(`Please enter both your ${fieldLabel} and Password.`);
+      } else if (!uid) {
+        setLoginError(`Please enter your ${fieldLabel}.`);
+      } else {
+        setLoginError("Please enter your Password.");
+      }
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -124,8 +156,8 @@ function Login({ onLoginSuccess }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: loginData.userId,
-          password: loginData.password,
+          userId: uid,
+          password: pwd,
           role: role
         })
       });
@@ -134,6 +166,8 @@ function Login({ onLoginSuccess }) {
       setIsSubmitting(false);
 
       if (response.ok && data.user) {
+        setRegisterNumberError(false);
+        setPasswordError(false);
         if (data.token) {
           localStorage.setItem("svcet_token", data.token);
         }
@@ -143,12 +177,14 @@ function Login({ onLoginSuccess }) {
           onLoginSuccess(data.user);
         }
       } else {
-        setLoginError(data.message || "Invalid ID or Password for the selected role.");
+        setRegisterNumberError(true);
+        setPasswordError(true);
+        setLoginError(data.message || (role === "student" ? "Invalid Register Number or Password. Please check and try again." : "Invalid credentials for the selected role."));
       }
     } catch (error) {
       setIsSubmitting(false);
       console.error(error);
-      setLoginError("Could not connect to Python backend on port 5001. Please check the server status.");
+      setLoginError("Could not connect to Python backend on port 5001. Please ensure the backend server is running.");
     }
   };
 
@@ -169,7 +205,7 @@ function Login({ onLoginSuccess }) {
             <div className="brand-features">
               <div><span>✓</span> Real-Time Attendance Tracking</div>
               <div><span>✓</span> Examination Marksheets & CGPA</div>
-              <div><span>✓</span> Instant Online Fee Payments</div>
+              <div><span>✓</span> Online Fee Payments & Receipts</div>
             </div>
           </div>
           <div className="brand-bottom">© 2026 SVCET • Digital Campus Portal</div>
@@ -184,12 +220,14 @@ function Login({ onLoginSuccess }) {
               <p className="login-subtitle">Register your details to access the institutional portal</p>
             </div>
 
-            <form onSubmit={handleSignup}>
+            <form onSubmit={handleSignup} className="login-form-element">
               {/* FULL NAME */}
-              <div className="input-group">
-                <label>Full Name</label>
-                <div className="input-box">
-                  <span className="input-icon">👤</span>
+              <div className="login-form-group">
+                <label className="login-label">
+                  <span className="label-text">Full Name</span>
+                </label>
+                <div className="login-input-wrapper">
+                  <span className="login-field-icon">👤</span>
                   <input
                     type="text"
                     placeholder="Enter your full name"
@@ -201,10 +239,12 @@ function Login({ onLoginSuccess }) {
               </div>
 
               {/* REGISTER NUMBER */}
-              <div className="input-group">
-                <label>Register Number</label>
-                <div className="input-box">
-                  <span className="input-icon">🎓</span>
+              <div className="login-form-group">
+                <label className="login-label">
+                  <span className="label-text">Register Number</span>
+                </label>
+                <div className="login-input-wrapper">
+                  <span className="login-field-icon">🎓</span>
                   <input
                     type="text"
                     placeholder="e.g. SVCET006 or 11223344"
@@ -216,10 +256,12 @@ function Login({ onLoginSuccess }) {
               </div>
 
               {/* DEPARTMENT */}
-              <div className="input-group">
-                <label>Department</label>
-                <div className="input-box signup-select-box">
-                  <span className="input-icon">🏫</span>
+              <div className="login-form-group">
+                <label className="login-label">
+                  <span className="label-text">Department</span>
+                </label>
+                <div className="login-input-wrapper signup-select-box">
+                  <span className="login-field-icon">🏫</span>
                   <select
                     value={signupData.department}
                     onChange={(e) => setSignupData({ ...signupData, department: e.target.value })}
@@ -238,10 +280,12 @@ function Login({ onLoginSuccess }) {
               </div>
 
               {/* EMAIL */}
-              <div className="input-group">
-                <label>Email Address</label>
-                <div className="input-box">
-                  <span className="input-icon">✉️</span>
+              <div className="login-form-group">
+                <label className="login-label">
+                  <span className="label-text">Email Address</span>
+                </label>
+                <div className="login-input-wrapper">
+                  <span className="login-field-icon">✉️</span>
                   <input
                     type="email"
                     placeholder="Enter your email address"
@@ -253,10 +297,12 @@ function Login({ onLoginSuccess }) {
               </div>
 
               {/* PASSWORD */}
-              <div className="input-group">
-                <label>Password</label>
-                <div className="input-box">
-                  <span className="input-icon">🔑</span>
+              <div className="login-form-group">
+                <label className="login-label">
+                  <span className="label-text">Password</span>
+                </label>
+                <div className="login-input-wrapper">
+                  <span className="login-field-icon">🔑</span>
                   <input
                     type={showSignupPassword ? "text" : "password"}
                     placeholder="Create password (min 6 chars, letters & numbers)"
@@ -266,7 +312,7 @@ function Login({ onLoginSuccess }) {
                   />
                   <button
                     type="button"
-                    className="signup-password-toggle"
+                    className="password-toggle-btn"
                     onClick={() => setShowSignupPassword(!showSignupPassword)}
                   >
                     {showSignupPassword ? "Hide" : "Show"}
@@ -275,10 +321,12 @@ function Login({ onLoginSuccess }) {
               </div>
 
               {/* CONFIRM PASSWORD */}
-              <div className="input-group">
-                <label>Re-enter Password</label>
-                <div className="input-box">
-                  <span className="signup-input-icon">🔒</span>
+              <div className="login-form-group">
+                <label className="login-label">
+                  <span className="label-text">Re-enter Password</span>
+                </label>
+                <div className="login-input-wrapper">
+                  <span className="login-field-icon">🔒</span>
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Re-enter your password"
@@ -291,7 +339,7 @@ function Login({ onLoginSuccess }) {
                   />
                   <button
                     type="button"
-                    className="signup-password-toggle"
+                    className="password-toggle-btn"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? "Hide" : "Show"}
@@ -406,41 +454,61 @@ function Login({ onLoginSuccess }) {
           )}
 
           {/* LOGIN FORM */}
-          <form onSubmit={handleLogin}>
-            <div className="input-group">
-              <label>
-                {role === "student" ? "Register Number" : role === "faculty" ? "Faculty ID" : "Administrator ID"}
+          <form onSubmit={handleLogin} noValidate className="login-form-element">
+            <div className="login-form-group">
+              <label htmlFor="login-user-id" className="login-label">
+                <span className="label-text">
+                  {role === "student" ? "Register Number / Student ID" : role === "faculty" ? "Faculty ID" : "Administrator ID"}
+                </span>
+                {registerNumberError && <span className="field-error-hint">Required</span>}
               </label>
 
-              <div className="input-box">
-                <span className="input-icon">{currentRole.icon}</span>
+              <div className={`login-input-wrapper ${registerNumberError ? "has-error" : ""}`}>
+                <span className="login-field-icon">{currentRole.icon}</span>
                 <input
+                  id="login-user-id"
                   type="text"
                   placeholder={currentRole.placeholder}
                   value={loginData.userId}
-                  onChange={(e) => setLoginData({ ...loginData, userId: e.target.value })}
+                  onChange={(e) => {
+                    setLoginData({ ...loginData, userId: e.target.value });
+                    if (registerNumberError) setRegisterNumberError(false);
+                    if (loginError) setLoginError("");
+                  }}
+                  autoComplete="username"
                   required
                 />
               </div>
             </div>
 
-            <div className="input-group">
-              <label>Password</label>
-              <div className="input-box">
-                <span className="input-icon">🔒</span>
+            <div className="login-form-group">
+              <label htmlFor="login-password" className="login-label">
+                <span className="label-text">Password</span>
+                {passwordError && <span className="field-error-hint">Required</span>}
+              </label>
+              <div className={`login-input-wrapper ${passwordError ? "has-error" : ""}`}>
+                <span className="login-field-icon">🔒</span>
                 <input
+                  id="login-password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={loginData.password}
-                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                  onChange={(e) => {
+                    setLoginData({ ...loginData, password: e.target.value });
+                    if (passwordError) setPasswordError(false);
+                    if (loginError) setLoginError("");
+                  }}
+                  autoComplete="current-password"
                   required
                 />
                 <button
                   type="button"
-                  className="password-toggle"
+                  className="password-toggle-btn"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? "🙈" : "👁️"}
+                  {showPassword ? "👁️ Hide" : "👁️ Show"}
                 </button>
               </div>
             </div>

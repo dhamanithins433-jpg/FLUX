@@ -167,7 +167,7 @@ def register():
 def login():
     try:
         data = request.get_json() or {}
-        user_id = data.get('userId') or data.get('registerNumber') or ''
+        user_id = data.get('userId') or data.get('registerNumber') or data.get('user_id') or data.get('username') or ''
         user_id = user_id.strip()
         password = data.get('password', '')
         selected_role = data.get('role', '').strip()
@@ -175,15 +175,15 @@ def login():
         if not user_id or not password:
             return jsonify({'message': 'User ID and Password are required'}), 400
 
-        query = "SELECT * FROM users WHERE user_id = ?"
+        query = "SELECT * FROM users WHERE LOWER(user_id) = LOWER(?)"
         params = [user_id]
         if selected_role:
-            query += " AND role = ?"
+            query += " AND LOWER(role) = LOWER(?)"
             params.append(selected_role)
 
         user = db.execute_query(query, params, fetch_one=True)
         if not user or not check_password_hash(user['password_hash'], password):
-            return jsonify({'message': 'Invalid credentials. Please check your ID and Password.'}), 401
+            return jsonify({'message': 'Invalid credentials. Please check your Register Number / ID and Password.'}), 401
 
         # Fetch student or teacher record depending on role
         student_rec = None
@@ -266,11 +266,18 @@ def get_teachers():
 @app.route('/api/subjects', methods=['GET'])
 def get_subjects():
     dept = request.args.get('department')
+    semester = request.args.get('semester')
     query = "SELECT * FROM subjects WHERE 1=1"
     params = []
     if dept:
-        query += " AND department = ?"
-        params.append(dept)
+        query += " AND (department = ? OR department LIKE ?)"
+        params.extend([dept, f"%{dept}%"])
+    if semester and semester != 'All':
+        try:
+            query += " AND semester = ?"
+            params.append(int(semester))
+        except ValueError:
+            pass
     query += " ORDER BY subject_code ASC"
     subjects = db.execute_query(query, params, fetch_all=True)
     return jsonify({'subjects': subjects}), 200
@@ -289,7 +296,7 @@ def get_student_profile(current_user):
         (target_reg,), fetch_one=True
     )
     user_rec = db.execute_query(
-        "SELECT email, phone, role, created_at, year, semester, section, batch FROM users WHERE user_id = ?",
+        "SELECT name, email, phone, role, created_at, year, semester, section, batch, department FROM users WHERE user_id = ?",
         (target_reg,), fetch_one=True
     )
     if not student and not user_rec:
@@ -297,10 +304,10 @@ def get_student_profile(current_user):
 
     profile = {
         'register_no': target_reg,
-        'name': (student and student.get('name')) or current_user.get('name', ''),
+        'name': (student and student.get('name')) or (user_rec and user_rec.get('name')) or target_reg,
         'email': (student and student.get('email')) or (user_rec and user_rec.get('email')) or '',
         'phone': (student and student.get('phone')) or (user_rec and user_rec.get('phone')) or '',
-        'department': (student and student.get('department')) or current_user.get('department', ''),
+        'department': (student and student.get('department')) or (user_rec and user_rec.get('department')) or '',
         'year': (student and student.get('year')) or (user_rec and user_rec.get('year')) or 1,
         'semester': (student and student.get('semester')) or (user_rec and user_rec.get('semester')) or 1,
         'section': (student and student.get('section')) or (user_rec and user_rec.get('section')) or 'A',
@@ -445,8 +452,46 @@ def get_auth_student_courses(current_user):
 
 # ----------------- ATTENDANCE ENDPOINTS -----------------
 
-@app.route('/api/attendance', methods=['GET'])
-def get_attendance():
+@app.route('/api/attendance', methods=['GET', 'POST'])
+def handle_attendance():
+    if request.method == 'POST':
+        try:
+            data = request.get_json() or {}
+            reg_no = data.get('register_no') or data.get('registerNumber') or ''
+            reg_no = reg_no.strip()
+            date_str = data.get('date', datetime.date.today().strftime('%Y-%m-%d'))
+            subj = data.get('subject_code', 'CS3301')
+            status = data.get('status', 'Present')
+            remarks = data.get('remarks', '')
+            recorded_by = data.get('recorded_by') or 'Faculty'
+
+            if not reg_no:
+                return jsonify({'message': 'Register number is required'}), 400
+
+            existing = db.execute_query(
+                "SELECT id FROM attendance WHERE register_no = ? AND date = ? AND subject_code = ?",
+                (reg_no, date_str, subj), fetch_one=True
+            )
+            if existing:
+                db.execute_query(
+                    "UPDATE attendance SET status = ?, remarks = ?, recorded_by = ? WHERE id = ?",
+                    (status, remarks, recorded_by, existing['id']), commit=True
+                )
+                action = "updated"
+            else:
+                db.execute_query(
+                    "INSERT INTO attendance (register_no, date, status, subject_code, recorded_by, remarks) VALUES (?, ?, ?, ?, ?, ?)",
+                    (reg_no, date_str, status, subj, recorded_by, remarks), commit=True
+                )
+                action = "recorded"
+
+            return jsonify({
+                'message': f'Attendance for {reg_no} ({subj}) on {date_str} {action} successfully',
+                'status': 'success'
+            }), 200
+        except Exception as e:
+            return jsonify({'message': str(e)}), 500
+
     dept = request.args.get('department', 'Computer Science Engineering')
     year = request.args.get('year', '3')
     date_str = request.args.get('date', datetime.date.today().strftime('%Y-%m-%d'))

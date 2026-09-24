@@ -2,6 +2,23 @@ import React, { useState, useEffect } from "react";
 
 const API_BASE = "http://localhost:5001/api";
 
+const CONFIGURED_DEPARTMENTS = [
+  { value: "Computer Science Engineering", label: "Computer Science and Engineering (CSE)" },
+  { value: "Information Technology", label: "Information Technology (IT)" },
+  { value: "Electronics & Communication", label: "Electronics & Communication Engineering (ECE)" },
+  { value: "Electrical & Electronics", label: "Electrical & Electronics Engineering (EEE)" },
+  { value: "Mechanical Engineering", label: "Mechanical Engineering (MECH)" },
+  { value: "Civil Engineering", label: "Civil Engineering (CIVIL)" },
+  { value: "AI & Data Science", label: "Artificial Intelligence & Data Science (AIDS)" },
+  { value: "AI & machine learning", label: "Artificial Intelligence & Machine Learning (AIML / CSBS)" },
+  { value: "Cyber Security", label: "Cyber Security & Forensics (CYBER)" },
+  { value: "M.E. Power Electronics & Drives", label: "M.E. Power Electronics & Drives (BME)" },
+  { value: "M.E. Computer Science and Engineering", label: "M.E. Computer Science and Engineering (ME-CSE)" },
+  { value: "Master of Business Administration (MBA)", label: "Master of Business Administration (MBA)" },
+  { value: "Master of Computer Applications (MCA)", label: "Master of Computer Applications (MCA)" },
+  { value: "M.E.VLSI Design", label: "M.E. VLSI Design" }
+];
+
 function TeacherPortal({ user, initialTab }) {
   const [activeTab, setActiveTab] = useState(initialTab || "attendance");
 
@@ -34,6 +51,22 @@ function TeacherPortal({ user, initialTab }) {
   const [toastMessage, setToastMessage] = useState("");
   const [profile, setProfile] = useState(null);
 
+  // Student Attendance & Academics Detailed Inspection States
+  const [selectedStudentRegNo, setSelectedStudentRegNo] = useState("");
+  const [directSearchRegNo, setDirectSearchRegNo] = useState("");
+  const [selectedStudentProfile, setSelectedStudentProfile] = useState(null);
+  const [selectedStudentAttendance, setSelectedStudentAttendance] = useState(null);
+  const [selectedStudentMarks, setSelectedStudentMarks] = useState(null);
+  const [studentDetailsLoading, setStudentDetailsLoading] = useState(false);
+  const [studentAttDateFilter, setStudentAttDateFilter] = useState("");
+
+  // Single Student Attendance Add / Update States
+  const [newAttDate, setNewAttDate] = useState(new Date().toISOString().split("T")[0]);
+  const [newAttSubject, setNewAttSubject] = useState("CS3301");
+  const [newAttStatus, setNewAttStatus] = useState("Present");
+  const [newAttRemarks, setNewAttRemarks] = useState("");
+  const [isSavingStudentAtt, setIsSavingStudentAtt] = useState(false);
+
   // Fetch verified faculty profile from database
   useEffect(() => {
     fetch(`${API_BASE}/faculty/profile`, { headers: getAuthHeaders() })
@@ -52,18 +85,35 @@ function TeacherPortal({ user, initialTab }) {
       .catch((err) => console.error("Error fetching faculty profile:", err));
   }, []);
 
-  // Load Subjects on mount / dept change
+  // Load Subjects on mount / dept change / semester change
   useEffect(() => {
-    fetch(`${API_BASE}/subjects?department=${encodeURIComponent(selectedDept)}`)
+    let url = `${API_BASE}/subjects?department=${encodeURIComponent(selectedDept)}`;
+    if (selectedSemester && selectedSemester !== "All") {
+      url += `&semester=${selectedSemester}`;
+    }
+    fetch(url)
       .then((r) => r.json())
       .then((data) => {
         if (data.subjects && data.subjects.length > 0) {
           setSubjects(data.subjects);
           setSelectedSubject(data.subjects[0].subject_code);
+        } else {
+          // Fallback to all subjects for this department if semester-filtered query is empty
+          fetch(`${API_BASE}/subjects?department=${encodeURIComponent(selectedDept)}`)
+            .then((r2) => r2.json())
+            .then((data2) => {
+              if (data2.subjects && data2.subjects.length > 0) {
+                setSubjects(data2.subjects);
+                setSelectedSubject(data2.subjects[0].subject_code);
+              } else {
+                setSubjects([]);
+              }
+            })
+            .catch(() => setSubjects([]));
         }
       })
       .catch((err) => console.error(err));
-  }, [selectedDept]);
+  }, [selectedDept, selectedSemester]);
 
   // Load Department Students Roster
   useEffect(() => {
@@ -198,6 +248,80 @@ function TeacherPortal({ user, initialTab }) {
     }
   };
 
+  // INDIVIDUAL STUDENT ATTENDANCE & ACADEMIC INSPECTION
+  const fetchStudentFullDetails = async (regNo) => {
+    if (!regNo) return;
+    const cleanReg = regNo.trim().toUpperCase();
+    setStudentDetailsLoading(true);
+    setSelectedStudentRegNo(cleanReg);
+    try {
+      const headers = getAuthHeaders();
+      const [profileRes, attRes, marksRes] = await Promise.all([
+        fetch(`${API_BASE}/student/profile?register_no=${encodeURIComponent(cleanReg)}`, { headers })
+          .then((r) => (r.ok ? r.json() : {}))
+          .catch(() => ({})),
+        fetch(`${API_BASE}/attendance/student/${encodeURIComponent(cleanReg)}`, { headers })
+          .then((r) => (r.ok ? r.json() : {}))
+          .catch(() => ({})),
+        fetch(`${API_BASE}/marks/student/${encodeURIComponent(cleanReg)}`, { headers })
+          .then((r) => (r.ok ? r.json() : {}))
+          .catch(() => ({}))
+      ]);
+
+      if (profileRes && profileRes.profile) {
+        setSelectedStudentProfile(profileRes.profile);
+      } else {
+        const found = departmentStudents.find((s) => s.register_no?.toUpperCase() === cleanReg);
+        setSelectedStudentProfile(found || { register_no: cleanReg, name: "Student", department: selectedDept });
+      }
+
+      setSelectedStudentAttendance(attRes || null);
+      setSelectedStudentMarks(marksRes || null);
+    } catch (err) {
+      console.error("Error loading student details:", err);
+      showToast("Error loading student records from database");
+    } finally {
+      setStudentDetailsLoading(false);
+    }
+  };
+
+  const handleUpdateStudentAttendance = async (e) => {
+    e.preventDefault();
+    if (!selectedStudentRegNo) return;
+    setIsSavingStudentAtt(true);
+    try {
+      const res = await fetch(`${API_BASE}/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          register_no: selectedStudentRegNo,
+          date: newAttDate,
+          subject_code: newAttSubject,
+          status: newAttStatus,
+          remarks: newAttRemarks,
+          recorded_by: profile?.faculty_id || user?.faculty_id || user?.userId || "FAC001"
+        })
+      });
+      const data = await res.json();
+      setIsSavingStudentAtt(false);
+      if (res.ok) {
+        showToast(data.message || `Attendance for ${selectedStudentRegNo} saved to MySQL successfully!`);
+        // Refresh attendance records from MySQL
+        const updatedAtt = await fetch(`${API_BASE}/attendance/student/${encodeURIComponent(selectedStudentRegNo)}`, {
+          headers: getAuthHeaders()
+        }).then((r) => r.json());
+        setSelectedStudentAttendance(updatedAtt);
+        setNewAttRemarks("");
+      } else {
+        alert(data.message || "Failed to save attendance record");
+      }
+    } catch (err) {
+      setIsSavingStudentAtt(false);
+      console.error(err);
+      alert("Error saving attendance record to database");
+    }
+  };
+
   // MARKS HANDLERS
   const calculateGrade = (val, max = 100) => {
     const score = Number(val);
@@ -302,6 +426,41 @@ function TeacherPortal({ user, initialTab }) {
     return !studentSearch || s.name?.toLowerCase().includes(q) || s.register_no?.toLowerCase().includes(q);
   });
 
+  // Calculate subject-wise attendance breakdown for selected student
+  const studentAttRecords = selectedStudentAttendance?.records || [];
+  const filteredStudentAtt = studentAttDateFilter
+    ? studentAttRecords.filter((a) => a.date === studentAttDateFilter)
+    : studentAttRecords;
+
+  const studentSubMap = {};
+  studentAttRecords.forEach((a) => {
+    const code = a.subject_code || "GEN001";
+    if (!studentSubMap[code]) {
+      studentSubMap[code] = {
+        subject_code: code,
+        subject_name: a.subject_name || code,
+        total: 0,
+        present: 0,
+        late: 0,
+        absent: 0
+      };
+    }
+    studentSubMap[code].total += 1;
+    if (a.status === "Present") studentSubMap[code].present += 1;
+    else if (a.status === "Late") studentSubMap[code].late += 1;
+    else if (a.status === "Absent") studentSubMap[code].absent += 1;
+  });
+
+  const subjectAttList = Object.values(studentSubMap).map((sub) => {
+    const effectivePresent = sub.present + (sub.late * 0.5);
+    const pct = sub.total > 0 ? Math.round((effectivePresent / sub.total) * 100) : 0;
+    return {
+      ...sub,
+      percentage: pct,
+      isShortage: pct < 75
+    };
+  });
+
   return (
     <div className="portal-container">
       {/* HEADER */}
@@ -349,94 +508,484 @@ function TeacherPortal({ user, initialTab }) {
         </button>
       </div>
 
-      {/* ================= TAB 1: STUDENTS ROSTER ================= */}
+      {/* ================= TAB 1: STUDENTS ROSTER & ATTENDANCE INSPECTION ================= */}
       {activeTab === "students" && (
-        <div className="portal-card">
-          <div className="card-toolbar" style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", flex: 1 }}>
-              <div className="search-box" style={{ minWidth: "260px" }}>
-                <span>🔍</span>
-                <input
-                  type="text"
-                  placeholder="Search students by Name or Register No..."
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                />
-              </div>
-
-              <div className="filter-group">
-                <label>Department:</label>
-                <select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
-                  <option value="Computer Science Engineering">Computer Science</option>
-                  <option value="Information Technology">Information Technology</option>
-                  <option value="Electronics & Communication">Electronics & Comm.</option>
-                  <option value="Electrical & Electronics">Electrical & Electronics</option>
-                  <option value="Mechanical Engineering">Mechanical Engg.</option>
-                  <option value="Civil Engineering">Civil Engineering</option>
-                  <option value="AI & Data Science">AI & Data Science</option>
-                </select>
-              </div>
-
-              <div className="filter-group">
-                <label>Semester:</label>
-                <select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                    <option key={s} value={s}>Semester {s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="filter-group">
-                <label>Section:</label>
-                <select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)}>
-                  <option value="All">All Sections</option>
-                  <option value="A">Section A</option>
-                  <option value="B">Section B</option>
-                  <option value="C">Section C</option>
-                </select>
+        selectedStudentRegNo ? (
+          <div className="portal-card">
+            {/* BACK BUTTON & TOP TITLE */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setSelectedStudentRegNo("");
+                  setSelectedStudentProfile(null);
+                  setSelectedStudentAttendance(null);
+                  setSelectedStudentMarks(null);
+                }}
+              >
+                ← Back to Students Roster
+              </button>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <span className="badge-paid">Live MySQL Records</span>
               </div>
             </div>
-          </div>
 
-          <div className="table-responsive">
-            <table className="portal-table">
-              <thead>
-                <tr>
-                  <th>Register No</th>
-                  <th>Student Name</th>
-                  <th>Department</th>
-                  <th>Semester</th>
-                  <th>Section</th>
-                  <th>Batch</th>
-                  <th>Institutional Email</th>
-                  <th>Contact</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDeptStudents.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" style={{ textAlign: "center", padding: "28px", color: "#64748b" }}>
-                      No student records found for the selected department and semester.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredDeptStudents.map((s) => (
-                    <tr key={s.register_no}>
-                      <td><strong>{s.register_no}</strong></td>
-                      <td>{s.name}</td>
-                      <td><span className="dept-tag">{s.department}</span></td>
-                      <td>Sem {s.semester || selectedSemester}</td>
-                      <td><span className="grade-badge grade-A">{s.section || "A"}</span></td>
-                      <td>{s.batch || "2024-2028"}</td>
-                      <td>{s.email}</td>
-                      <td>{s.phone || "-"}</td>
-                    </tr>
-                  ))
+            {studentDetailsLoading ? (
+              <div style={{ textAlign: "center", padding: "40px" }}>
+                <p>Loading student attendance and academic records from database...</p>
+              </div>
+            ) : (
+              <div>
+                {/* STUDENT PROFILE HEADER BANNER */}
+                <div className="faculty-student-header-banner">
+                  <div>
+                    <span className="portal-pill student">STUDENT PROFILE & ACADEMIC DATA</span>
+                    <h2 style={{ margin: "6px 0 2px" }}>{selectedStudentProfile?.name || "Student"}</h2>
+                    <p className="text-muted" style={{ margin: 0 }}>
+                      Register No: <strong>{selectedStudentProfile?.register_no || selectedStudentRegNo}</strong> • {selectedStudentProfile?.department || selectedDept}
+                    </p>
+                  </div>
+                  <div className="faculty-student-meta-grid">
+                    <div className="faculty-student-meta-item">
+                      <span>Academic Year</span>
+                      <strong>Year {selectedStudentProfile?.year || 1} • Sem {selectedStudentProfile?.semester || 1}</strong>
+                    </div>
+                    <div className="faculty-student-meta-item">
+                      <span>Section & Batch</span>
+                      <strong>Section {selectedStudentProfile?.section || "A"} • {selectedStudentProfile?.batch || "2024-2028"}</strong>
+                    </div>
+                    <div className="faculty-student-meta-item">
+                      <span>Institutional Email</span>
+                      <strong>{selectedStudentProfile?.email || "-"}</strong>
+                    </div>
+                    <div className="faculty-student-meta-item">
+                      <span>Contact Phone</span>
+                      <strong>{selectedStudentProfile?.phone || "-"}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ATTENDANCE WARNING IF SHORTAGE */}
+                {selectedStudentAttendance?.percentage !== null && selectedStudentAttendance?.percentage < 75 && (
+                  <div className="alert-banner warning" style={{ marginBottom: "18px" }}>
+                    ⚠ <strong>Attendance Shortage Alert:</strong> Current attendance is {selectedStudentAttendance?.percentage}%, which is below the mandatory 75% institutional requirement.
+                  </div>
                 )}
-              </tbody>
-            </table>
+
+                {/* ATTENDANCE STAT METRIC CARDS */}
+                <div className="stats-grid" style={{ marginBottom: "24px" }}>
+                  <div className="stat-card">
+                    <div className="stat-icon">📅</div>
+                    <div>
+                      <span className="stat-label">Total Classes Conducted</span>
+                      <strong className="stat-value text-blue">{selectedStudentAttendance?.total_classes || 0}</strong>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon">✅</div>
+                    <div>
+                      <span className="stat-label">Classes Present</span>
+                      <strong className="stat-value text-green">{selectedStudentAttendance?.present || 0}</strong>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon">⏱️</div>
+                    <div>
+                      <span className="stat-label">Late / Absent</span>
+                      <strong className="stat-value text-red">
+                        {selectedStudentAttendance?.late || 0} Late • {selectedStudentAttendance?.absent || 0} Absent
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="stat-card primary">
+                    <div className="stat-icon">📈</div>
+                    <div>
+                      <span className="stat-label">Attendance Percentage</span>
+                      <strong className={`stat-value ${(selectedStudentAttendance?.percentage || 0) >= 75 ? "text-green" : "text-red"}`}>
+                        {selectedStudentAttendance?.percentage !== null && selectedStudentAttendance?.percentage !== undefined
+                          ? `${selectedStudentAttendance.percentage}%`
+                          : "No Data"}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ADD / UPDATE ATTENDANCE FOR THIS STUDENT IN MYSQL */}
+                <div className="faculty-attendance-action-panel">
+                  <h4>📝 Add or Update Attendance for {selectedStudentProfile?.name || selectedStudentRegNo}</h4>
+                  <p className="text-muted" style={{ fontSize: "12.5px", marginTop: "2px", marginBottom: "16px" }}>
+                    Select date, subject, and status to record or update attendance directly in the MySQL database.
+                  </p>
+                  <form onSubmit={handleUpdateStudentAttendance}>
+                    <div className="attendance-form-row">
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Attendance Date:</label>
+                        <input
+                          type="date"
+                          value={newAttDate}
+                          onChange={(e) => setNewAttDate(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Course / Subject:</label>
+                        <select
+                          value={newAttSubject}
+                          onChange={(e) => setNewAttSubject(e.target.value)}
+                          required
+                        >
+                          {subjects.length > 0 ? (
+                            subjects.map((sub) => (
+                              <option key={sub.subject_code} value={sub.subject_code}>
+                                {sub.subject_code} - {sub.subject_name}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="CS3301">CS3301 - Data Structures</option>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Attendance Status:</label>
+                        <select
+                          value={newAttStatus}
+                          onChange={(e) => setNewAttStatus(e.target.value)}
+                          required
+                        >
+                          <option value="Present">✓ Present</option>
+                          <option value="Late">⏱ Late</option>
+                          <option value="Absent">✕ Absent</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Remarks (Optional):</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Lab experiment / Lecture"
+                          value={newAttRemarks}
+                          onChange={(e) => setNewAttRemarks(e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <button
+                          type="submit"
+                          className="btn-primary"
+                          disabled={isSavingStudentAtt}
+                          style={{ width: "100%", height: "42px" }}
+                        >
+                          {isSavingStudentAtt ? "Saving to MySQL..." : "💾 Save to MySQL"}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+
+                {/* SUBJECT-WISE ATTENDANCE BREAKDOWN */}
+                <div style={{ marginTop: "28px" }}>
+                  <div className="card-top-title">
+                    <h3>📚 Subject-Wise Attendance Breakdown</h3>
+                    <span className="text-muted small">Aggregated from attendance records</span>
+                  </div>
+
+                  {subjectAttList.length === 0 ? (
+                    <p className="empty-notice" style={{ padding: "16px 0" }}>No subject attendance recorded yet for this student.</p>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="faculty-sub-table">
+                        <thead>
+                          <tr>
+                            <th>Subject Code</th>
+                            <th>Subject Name</th>
+                            <th>Classes Conducted</th>
+                            <th>Present</th>
+                            <th>Late</th>
+                            <th>Absent</th>
+                            <th>Attendance %</th>
+                            <th>Eligibility Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {subjectAttList.map((sub) => (
+                            <tr key={sub.subject_code}>
+                              <td><strong>{sub.subject_code}</strong></td>
+                              <td>{sub.subject_name}</td>
+                              <td>{sub.total}</td>
+                              <td className="text-green fw-bold">{sub.present}</td>
+                              <td className="text-amber">{sub.late}</td>
+                              <td className="text-red">{sub.absent}</td>
+                              <td>
+                                <strong className={sub.isShortage ? "text-red" : "text-green"}>
+                                  {sub.percentage}%
+                                </strong>
+                              </td>
+                              <td>
+                                {sub.isShortage ? (
+                                  <span className="badge-due">Shortage (&lt;75%)</span>
+                                ) : (
+                                  <span className="badge-paid">Eligible</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* DETAILED ATTENDANCE HISTORY LIST */}
+                <div style={{ marginTop: "28px" }}>
+                  <div className="card-top-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                    <h3>📅 Attendance Log & History Records</h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <label style={{ fontSize: "12px", color: "#64748b" }}>Filter Date:</label>
+                      <input
+                        type="date"
+                        value={studentAttDateFilter}
+                        onChange={(e) => setStudentAttDateFilter(e.target.value)}
+                        style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                      />
+                      {studentAttDateFilter && (
+                        <button
+                          type="button"
+                          className="btn-outline"
+                          onClick={() => setStudentAttDateFilter("")}
+                          style={{ padding: "4px 8px", fontSize: "11px" }}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {filteredStudentAtt.length === 0 ? (
+                    <p className="empty-notice" style={{ padding: "16px 0" }}>No attendance log records found for this student.</p>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="portal-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Subject Code</th>
+                            <th>Subject Name</th>
+                            <th>Status</th>
+                            <th>Recorded By</th>
+                            <th>Remarks</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredStudentAtt.map((att, idx) => (
+                            <tr key={att.id || idx}>
+                              <td><strong>{att.date}</strong></td>
+                              <td><code>{att.subject_code}</code></td>
+                              <td>{att.subject_name || "-"}</td>
+                              <td>
+                                <span className={`grade-badge ${att.status === "Present" ? "grade-A" : att.status === "Late" ? "grade-B" : "grade-RA"}`}>
+                                  {att.status}
+                                </span>
+                              </td>
+                              <td>{att.recorded_by || "-"}</td>
+                              <td className="text-muted">{att.remarks || "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* STUDENT ACADEMIC MARKS */}
+                <div style={{ marginTop: "28px" }}>
+                  <div className="card-top-title">
+                    <h3>📊 Academic Examination Marks & Evaluation</h3>
+                    {selectedStudentMarks?.average_percentage && (
+                      <span className="badge-paid">Overall Average: {selectedStudentMarks.average_percentage}%</span>
+                    )}
+                  </div>
+
+                  {(!selectedStudentMarks?.records || selectedStudentMarks.records.length === 0) ? (
+                    <p className="empty-notice" style={{ padding: "16px 0" }}>No examination marks recorded yet for this student.</p>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="portal-table">
+                        <thead>
+                          <tr>
+                            <th>Subject Code</th>
+                            <th>Subject Name</th>
+                            <th>Exam / Assessment</th>
+                            <th>Marks Obtained</th>
+                            <th>Max Marks</th>
+                            <th>Grade</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedStudentMarks.records.map((m, idx) => {
+                            const isPass = Number(m.marks_obtained) >= (Number(m.max_marks) * 0.5);
+                            return (
+                              <tr key={m.id || idx}>
+                                <td><strong>{m.subject_code}</strong></td>
+                                <td>{m.subject_name || "-"}</td>
+                                <td>{m.exam_type}</td>
+                                <td className="fw-bold">{m.marks_obtained}</td>
+                                <td>/ {m.max_marks || 100}</td>
+                                <td>
+                                  <span className={`grade-badge grade-${m.grade || "B"}`}>
+                                    {m.grade || "-"}
+                                  </span>
+                                </td>
+                                <td>
+                                  {isPass ? (
+                                    <span className="badge-paid">PASS</span>
+                                  ) : (
+                                    <span className="badge-due">REAPPEAR</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          <div className="portal-card">
+            {/* DIRECT SEARCH BY REGISTER NUMBER */}
+            <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", borderRadius: "12px", padding: "16px 20px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
+              <div>
+                <strong style={{ fontSize: "14px", color: "#092b5c" }}>🔍 Search Student by Register Number:</strong>
+                <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>Quickly inspect individual student attendance, subject breakdown, and academic marks.</p>
+              </div>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="e.g. SVCET001 or SVCET002"
+                  value={directSearchRegNo}
+                  onChange={(e) => setDirectSearchRegNo(e.target.value)}
+                  style={{ padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "8px", fontSize: "13px", minWidth: "220px", background: "#ffffff" }}
+                />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    if (!directSearchRegNo.trim()) {
+                      alert("Please enter a Register Number to search.");
+                      return;
+                    }
+                    fetchStudentFullDetails(directSearchRegNo);
+                  }}
+                >
+                  Inspect Records →
+                </button>
+              </div>
+            </div>
+
+            <div className="card-toolbar" style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", flex: 1 }}>
+                <div className="search-box" style={{ minWidth: "260px" }}>
+                  <span>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Filter students by Name or Register No..."
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                  />
+                </div>
+
+                <div className="filter-group">
+                  <label>Department:</label>
+                  <select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
+                    {CONFIGURED_DEPARTMENTS.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label>Semester:</label>
+                  <select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                      <option key={s} value={s}>Semester {s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label>Section:</label>
+                  <select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)}>
+                    <option value="All">All Sections</option>
+                    <option value="A">Section A</option>
+                    <option value="B">Section B</option>
+                    <option value="C">Section C</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="table-responsive">
+              <table className="portal-table">
+                <thead>
+                  <tr>
+                    <th>Register No</th>
+                    <th>Student Name</th>
+                    <th>Department</th>
+                    <th>Semester</th>
+                    <th>Section</th>
+                    <th>Batch</th>
+                    <th>Institutional Email</th>
+                    <th>Contact</th>
+                    <th>Attendance & Academics</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredDeptStudents.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" style={{ textAlign: "center", padding: "28px", color: "#64748b" }}>
+                        No student records found for the selected department and semester.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDeptStudents.map((s) => (
+                      <tr key={s.register_no}>
+                        <td><strong>{s.register_no}</strong></td>
+                        <td>{s.name}</td>
+                        <td><span className="dept-tag">{s.department}</span></td>
+                        <td>Sem {s.semester || selectedSemester}</td>
+                        <td><span className="grade-badge grade-A">{s.section || "A"}</span></td>
+                        <td>{s.batch || "2024-2028"}</td>
+                        <td>{s.email}</td>
+                        <td>{s.phone || "-"}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-view-student-records"
+                            onClick={() => fetchStudentFullDetails(s.register_no)}
+                          >
+                            📊 View Records →
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
       )}
 
       {/* ================= TAB 2: ATTENDANCE ================= */}
@@ -447,10 +996,11 @@ function TeacherPortal({ user, initialTab }) {
             <div className="filter-item">
               <label>Department:</label>
               <select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
-                <option value="Computer Science Engineering">Computer Science</option>
-                <option value="Information Technology">Information Technology</option>
-                <option value="Electronics & Communication">Electronics & Comm.</option>
-                <option value="Mechanical Engineering">Mechanical Engg.</option>
+                {CONFIGURED_DEPARTMENTS.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -606,10 +1156,11 @@ function TeacherPortal({ user, initialTab }) {
             <div className="filter-item">
               <label>Department:</label>
               <select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
-                <option value="Computer Science Engineering">Computer Science</option>
-                <option value="Information Technology">Information Technology</option>
-                <option value="Electronics & Communication">Electronics & Comm.</option>
-                <option value="Mechanical Engineering">Mechanical Engg.</option>
+                {CONFIGURED_DEPARTMENTS.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
               </select>
             </div>
 

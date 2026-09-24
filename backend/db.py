@@ -54,19 +54,20 @@ class DatabaseManager:
         self.use_mysql = False
 
     def check_health(self):
-        status = {
-            "status": "healthy",
-            "database": "connected" if self.use_mysql else "fallback_sqlite",
-            "engine": "MySQL 8.x" if self.use_mysql else "SQLite 3",
-            "sqlite_file": str(self.sqlite_path)
-        }
+        is_alive = False
         try:
             row = self.execute_query("SELECT 1 as ping", fetch_one=True)
-            status["ping"] = "pong" if row else "fail"
-        except Exception as e:
-            status["status"] = "degraded"
-            status["database"] = "error"
-            status["error"] = str(e)
+            if row:
+                is_alive = True
+        except Exception:
+            is_alive = False
+
+        status = {
+            "status": "ok" if is_alive else "error",
+            "database": "connected" if is_alive else "disconnected",
+            "engine": "MySQL 8.x" if self.use_mysql else "SQLite 3",
+            "mode": "mysql" if self.use_mysql else "fallback_sqlite"
+        }
         return status
 
     def get_connection(self):

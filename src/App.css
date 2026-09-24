@@ -3639,71 +3639,7 @@ body {
   transform: translateY(-1px);
 }
 
-/* QUICK QR ALERT STRIP ON STUDENT DASHBOARD */
-.portal-quick-qr-alert {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border: 1.5px solid #10b981;
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 22px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
-  gap: 16px;
-  flex-wrap: wrap;
-}
 
-.qr-alert-content {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex: 1;
-}
-
-.qr-alert-fire {
-  font-size: 28px;
-  background: #10b981;
-  color: white;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.qr-alert-content strong {
-  font-size: 15px;
-  color: #065f46;
-  display: block;
-}
-
-.qr-alert-content p {
-  font-size: 13px;
-  color: #047857;
-  margin: 2px 0 0;
-}
-
-.btn-qr-alert-go {
-  background: #059669;
-  color: #ffffff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
-}
-
-.btn-qr-alert-go:hover {
-  background: #047857;
-  transform: translateY(-1px);
-}
 
 /* QR TAB BUTTON HIGHLIGHT */
 .qr-tab-btn {
@@ -4042,3 +3978,497 @@ body {
   }
 
 }
+
+/* =========================================================
+   BOOTSTRAP HARMONIZATION & STYLING IMPROVEMENTS
+   Preserves 100% of existing application structure and styles
+========================================================= */
+
+/* Prevent Bootstrap from breaking sidebar or custom button fonts */
+body {
+  font-family: "Montserrat", sans-serif;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* =========================================================
+   VERIFIED STUDENT ACADEMIC PROFILE (BOOTSTRAP-BASED STYLING)
+========================================================= */
+.student-profile-display-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.profile-detail-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.profile-detail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  border-color: #3b82f6;
+}
+
+.profile-field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.profile-field-value {
+  font-size: 16px;
+  color: #0f172a;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.profile-field-value.highlight-reg {
+  color: #2563eb;
+  font-family: monospace;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   PROFESSIONAL ORIGINAL FEES BILL / INVOICE STYLING
+========================================================= */
+.fees-bill-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+  margin-bottom: 24px;
+}
+
+.fees-bill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f1f5f9;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.fees-bill-college-info h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
+}
+
+.fees-bill-college-info p {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0;
+}
+
+.fees-bill-meta {
+  text-align: right;
+  min-width: 200px;
+}
+
+.fees-bill-meta .bill-no {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1e293b;
+}
+
+.fees-bill-meta .bill-date {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.fees-bill-student-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  background: #f8fafc;
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.fees-bill-student-item span {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.fees-bill-student-item strong {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.fees-bill-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.fees-bill-table th {
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.fees-bill-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.fees-bill-table tr:hover td {
+  background: #f8fafc;
+}
+
+.fees-bill-summary-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.fees-bill-totals-box {
+  width: 320px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.fees-bill-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 8px;
+  color: #475569;
+}
+
+.fees-bill-total-row.highlight-due {
+  font-size: 16px;
+  font-weight: 700;
+  border-top: 2px dashed #cbd5e1;
+  padding-top: 10px;
+  margin-top: 8px;
+  color: #0f172a;
+}
+
+.fees-bill-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   ACADEMIC MARKSHEET ASSESSMENT SELECTOR & STYLES
+========================================================= */
+.assessment-filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn-assessment-filter {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-assessment-filter:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-assessment-filter.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.assessment-kpi-banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.assessment-kpi-item span {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.assessment-kpi-item strong {
+  display: block;
+  font-size: 18px;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+/* =========================================================
+   ATTENDANCE RECORD DATE & SUBJECT FILTER CONTROLS
+========================================================= */
+.attendance-controls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.attendance-date-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.attendance-date-picker-wrap label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.attendance-date-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.attendance-date-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.attendance-view-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-view-toggle {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-view-toggle.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+@media print {
+  .sidebar,
+  .top-header,
+  .portal-header-actions,
+  .portal-tabs,
+  .fees-bill-actions,
+  .card-bottom-action {
+    display: none !important;
+  }
+  .main-content,
+  .portal-card,
+  .fees-bill-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
+/* =========================================================
+   FACULTY PORTAL: STUDENT ATTENDANCE & ACADEMIC DETAILS
+========================================================= */
+
+.faculty-student-view-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.faculty-student-header-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.faculty-student-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.faculty-student-meta-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.faculty-student-meta-item span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.faculty-student-meta-item strong {
+  display: block;
+  font-size: 13.5px;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+.faculty-attendance-action-panel {
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.faculty-attendance-action-panel h4 {
+  margin: 0 0 14px;
+  font-size: 16px;
+  color: #092b5c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attendance-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.faculty-sub-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.faculty-sub-table th,
+.faculty-sub-table td {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+  font-size: 13px;
+}
+
+.faculty-sub-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.faculty-sub-table tr:hover {
+  background: #f8fafc;
+}
+
+.btn-view-student-records {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-view-student-records:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
