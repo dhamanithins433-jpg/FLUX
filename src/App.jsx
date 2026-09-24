@@ -238,60 +238,67 @@ function App() {
      {/* ================= MAIN CONTENT ================= */}
 <main className="main-content">
   {/* ================= HEADER (ONE NAVBAR LOGIN) ================= */}
+  {/* ================= HEADER (ONE NAVBAR LOGIN) ================= */}
   <header className="top-header">
 
     <div className="header-left">
-      <img src="/college-logo.png" alt="College Logo" />
+      {/* BRAND & LOGO */}
+      <div
+        className="header-brand"
+        onClick={() => navigateTo("home")}
+        title="Sri Venkateswara College of Engineering and Technology"
+      >
+        <div className="college-logo-wrapper">
+          <img src="/college-logo.png" alt="Sri Venkateswara College Logo" className="header-college-logo" />
+        </div>
 
-      <div>
-        <h1>SRI VENKATESWARA</h1>
-        <p>College of Engineering and Technology</p>
+        <div className="header-title-block">
+          <h1 className="header-main-title">SRI VENKATESWARA</h1>
+          <p className="header-sub-title">College of Engineering and Technology</p>
+        </div>
       </div>
+
+      {/* ACCREDITATIONS */}
       <div className="accreditation-logos">
-
-      <img src="/iso.png" alt="ISO Certification" />
-
-      <img src="/NAAC_LOGO.png" alt="NAAC Logo" />
-
-      <img src="/naac.png" alt="NAAC Accreditation" />
-
-      <img src="All_India_Council_for_Technical_Education_logo.png" alt="AICET" />
-    </div>
+        <img src="/iso.png" alt="ISO Certification" />
+        <img src="/NAAC_LOGO.png" alt="NAAC Logo" />
+        <img src="/naac.png" alt="NAAC Accreditation" />
+        <img src="/All_India_Council_for_Technical_Education_logo.png" alt="AICTE" />
+      </div>
     </div>
     
     <div className="header-right">
-      <p>An Autonomous Institution</p>
+      <p className="autonomous-text">An Autonomous Institution</p>
 
       {!currentUser ? (
         activeMenu !== "login" && (
           <button
             className="login-button"
             onClick={() => navigateTo("login")}
+            id="nav-login-btn"
           >
             Login
           </button>
         )
       ) : (
         <div className="header-logged-actions">
-
           <button
             className="login-button"
             onClick={() => navigateTo("portal")}
+            id="nav-portal-btn"
+            title="Go to Portal"
           >
-            {currentUser.role === "college"
-              ? "Admin Portal"
-              : currentUser.role === "faculty"
-              ? "Faculty Portal"
-              : "Student Portal"}
+            {currentUser.name || (currentUser.role === "college" ? "Admin Portal" : currentUser.role === "faculty" ? "Faculty Portal" : "Student Portal")}
           </button>
 
           <button
             className="logout-button"
             onClick={handleLogout}
+            id="nav-logout-btn"
+            title="Logout"
           >
             Logout
           </button>
-
         </div>
       )}
     </div>
