@@ -235,52 +235,69 @@ function App() {
         </div>
       </aside>
 
-      {/* ================= MAIN CONTENT ================= */}
-      <main className="main-content">
-        {/* ================= HEADER (ONE NAVBAR LOGIN) ================= */}
-        <header className="top-header">
-          <div className="header-left">
-            <img src="/college-logo.png" alt="College Logo" />
-            <div>
-              <h1>SRI VENKATESWARA</h1>
-              <p>College of Engineering and Technology</p>
-            </div>
-          </div>
+     {/* ================= MAIN CONTENT ================= */}
+<main className="main-content">
+  {/* ================= HEADER (ONE NAVBAR LOGIN) ================= */}
+  <header className="top-header">
 
-          <div className="header-right">
-            <p>An Autonomous Institution</p>
-            {!currentUser ? (
-              activeMenu !== "login" && (
-                <button
-                  className="login-button"
-                  onClick={() => navigateTo("login")}
-                >
-                  Login
-                </button>
-              )
-            ) : (
-              <div className="header-logged-actions">
-                <button
-                  className="login-button"
-                  onClick={() => navigateTo("portal")}
-                >
-                  {currentUser.role === "college"
-                    ? "Admin Portal"
-                    : currentUser.role === "faculty"
-                    ? "Faculty Portal"
-                    : "Student Portal"}
-                </button>
-                <button
-                  className="logout-button"
-                  onClick={handleLogout}
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
+    <div className="header-left">
+      <img src="/college-logo.png" alt="College Logo" />
 
+      <div>
+        <h1>SRI VENKATESWARA</h1>
+        <p>College of Engineering and Technology</p>
+      </div>
+      <div className="accreditation-logos">
+
+      <img src="/iso.png" alt="ISO Certification" />
+
+      <img src="/NAAC_LOGO.png" alt="NAAC Logo" />
+
+      <img src="/naac.png" alt="NAAC Accreditation" />
+
+      <img src="All_India_Council_for_Technical_Education_logo.png" alt="AICET" />
+    </div>
+    </div>
+    
+    <div className="header-right">
+      <p>An Autonomous Institution</p>
+
+      {!currentUser ? (
+        activeMenu !== "login" && (
+          <button
+            className="login-button"
+            onClick={() => navigateTo("login")}
+          >
+            Login
+          </button>
+        )
+      ) : (
+        <div className="header-logged-actions">
+
+          <button
+            className="login-button"
+            onClick={() => navigateTo("portal")}
+          >
+            {currentUser.role === "college"
+              ? "Admin Portal"
+              : currentUser.role === "faculty"
+              ? "Faculty Portal"
+              : "Student Portal"}
+          </button>
+
+          <button
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+
+        </div>
+      )}
+    </div>
+
+  </header>
+  
         {/* ================= HOME ================= */}
         {activeMenu === "home" && (
           <section id="home" className="hero-section">
@@ -301,6 +318,22 @@ function App() {
                 <br />
                 of Engineering and Technology
               </h1>
+
+              <div className="college-accreditation">
+
+      <p>
+        Approved by AICTE, New Delhi
+        <span className="accreditation-divider"> | </span>
+        Affiliated to Anna University, Chennai
+      </p>
+
+      <p>
+        Accredited by NAAC
+        <span className="accreditation-divider"> | </span>
+        An ISO 9001:2015 Certified
+      </p>
+
+    </div>
 
               <p>
                 Empowering Students Through

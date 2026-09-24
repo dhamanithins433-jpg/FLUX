@@ -3943,3 +3943,102 @@ body {
   text-align: center;
   margin-top: 14px;
 }
+
+/* ================= ACCREDITATION LOGOS ================= */
+
+.accreditation-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 20px;
+}
+
+.accreditation-logos img {
+  width: 65px;
+  height: 65px;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.accreditation-logos img:hover {
+  transform: scale(1.08);
+}
+
+/* ================= RESPONSIVE DESIGN ================= */
+
+@media (max-width: 768px) {
+  .top-header {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .accreditation-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 55px; 
+  margin: 0 20px;
+}
+
+  .accreditation-logos img {
+    width: 50px;
+    height: 50px;
+  }
+}
+/* ===============================
+   COLLEGE ACCREDITATION
+================================ */
+
+.college-accreditation {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+/* ACCREDITATION TEXT */
+
+.college-accreditation p {
+  font-family: "Georgia", "Times New Roman", serif;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  letter-spacing: 0.3px;
+  line-height: 1.6;
+
+  margin: 0;
+
+  color: inherit;
+}
+
+/* DIVIDER */
+
+.accreditation-divider {
+  margin: 0 8px;
+  font-weight: 700;
+}
+
+/* ===============================
+   RESPONSIVE DESIGN
+================================ */
+
+@media (max-width: 768px) {
+
+  .college-accreditation p {
+    font-size: 8px;
+    line-height: 1.4;
+    white-space: normal;
+  }
+
+  .college-accreditation {
+    gap: 3px;
+    margin-top: 5px;
+  }
+
+  .accreditation-divider {
+    margin: 0 4px;
+  }
+
+}
