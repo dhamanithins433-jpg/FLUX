@@ -2310,6 +2310,20 @@ def delete_study_material(material_id):
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
+# ----------------- HEALTH CHECK (Phase 19) -----------------
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    try:
+        health_status = db.check_health()
+        return jsonify(health_status), 200 if health_status.get('status') == 'ok' else 500
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'database': 'disconnected',
+            'message': str(e)
+        }), 500
+
 # ----------------- ENTRY POINT -----------------
 
 if __name__ == '__main__':

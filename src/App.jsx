@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Login from "./login";
 import AdminPortal from "./components/AdminPortal";
 import TeacherPortal from "./components/TeacherPortal";
 import StudentPortal from "./components/StudentPortal";
 import CSECourseHub from "./components/courses/CSECourseHub";
 import DepartmentCourseHub from "./components/courses/DepartmentCourseHub";
+import AboutSection from "./components/AboutSection";
+import AdmissionsSection from "./components/AdmissionsSection";
+import CampusLifeSection from "./components/CampusLifeSection";
+import StudentServicesSection from "./components/StudentServicesSection";
+import IQACSection from "./components/IQACSection";
+import AlumniSection from "./components/AlumniSection";
+import GallerySection from "./components/GallerySection";
 import React from "react";
 
 import "./App.css";
@@ -27,45 +34,69 @@ function App() {
   const [activeMenu, setActiveMenu] = useState("home");
   const [selectedDepartment, setSelectedDepartment] = useState(null);
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   const handleLogout = () => {
     localStorage.removeItem("svcet_token");
     localStorage.removeItem("svcet_user");
     setCurrentUser(null);
     setActiveMenu("home");
+    setMobileSidebarOpen(false);
   };
 
   // Navigation function
   const navigateTo = (page) => {
     setActiveMenu(page);
+    setMobileSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Menu Data (Sidebar navigation - strictly site sections, no sidebar login)
-  const menuItems = [
-    {
-      id: "home",
-      icon: "🏠",
-      name: "Home"
-    },
-    {
-      id: "courses",
-      icon: "🎓",
-      name: "Courses"
-    },
-    {
-      id: "achievements",
-      icon: "🏆",
-      name: "Achievements"
-    },
-    {
-      id: "placement",
-      icon: "💼",
-      name: "Placement"
-    },
-    {
-      id: "contact",
-      icon: "📞",
-      name: "Contact"
+  // Close sidebar on escape key or resize to desktop
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && mobileSidebarOpen) {
+        setMobileSidebarOpen(false);
+      }
+    };
+    const handleResize = () => {
+      if (window.innerWidth > 900) {
+        setMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [mobileSidebarOpen]);
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileSidebarOpen) {
+      document.body.classList.add("mobile-sidebar-active");
+    } else {
+      document.body.classList.remove("mobile-sidebar-active");
     }
+    return () => {
+      document.body.classList.remove("mobile-sidebar-active");
+    };
+  }, [mobileSidebarOpen]);
+
+  // Menu Data (Comprehensive 12-section institutional hierarchy)
+  const menuItems = [
+    { id: "home", icon: "🏠", name: "Home" },
+    { id: "about", icon: "🏛️", name: "About" },
+    { id: "courses", icon: "🎓", name: "Academics" },
+    { id: "admissions", icon: "📝", name: "Admissions" },
+    { id: "campus", icon: "🏫", name: "Campus Life" },
+    { id: "placement", icon: "💼", name: "Placements" },
+    { id: "student-services", icon: "🤝", name: "Student Services" },
+    { id: "iqac", icon: "📜", name: "IQAC / NAAC" },
+    { id: "alumni", icon: "👥", name: "Alumni" },
+    { id: "gallery", icon: "🖼️", name: "Gallery" },
+    { id: "achievements", icon: "🏆", name: "Achievements" },
+    { id: "contact", icon: "📞", name: "Contact" }
   ];
 
   // Department & Courses Data (Expanded list of 13 academic programs)
@@ -198,13 +229,36 @@ function App() {
 
   return (
     <div className="app">
+      {/* MOBILE SIDEBAR OVERLAY BACKDROP */}
+      <div
+        className={`sidebar-overlay ${mobileSidebarOpen ? "active" : ""}`}
+        onClick={() => setMobileSidebarOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* ================= SIDEBAR ================= */}
-      <aside className="sidebar">
-        {/* COLLEGE LOGO */}
-        <div className="sidebar-logo">
-          <img src="/college-logo.png" alt="College Logo" />
-          <h1>SVCET</h1>
-          <p>College Portal</p>
+      <aside
+        className={`sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}
+        id="app-sidebar"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* SIDEBAR HEADER */}
+        <div className="sidebar-header">
+          <div className="sidebar-logo" onClick={() => navigateTo("home")} role="button" tabIndex={0}>
+            <img src="/college-logo.png" alt="College Logo" />
+            <div className="sidebar-logo-text">
+              <h1>SVCET</h1>
+              <p>College Portal</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="sidebar-close-btn"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Close sidebar navigation"
+          >
+            ✕
+          </button>
         </div>
 
         {/* NAVIGATION MENU */}
@@ -213,7 +267,7 @@ function App() {
             <button
               key={item.id}
               className={
-                activeMenu === item.id || (item.id === "courses" && activeMenu === "cse-course")
+                activeMenu === item.id || (item.id === "courses" && (activeMenu === "cse-course" || activeMenu === "department-course"))
                   ? "nav-item active"
                   : "nav-item"
               }
@@ -225,6 +279,38 @@ function App() {
           ))}
         </nav>
 
+        {/* MOBILE AUTH ACTION IN SIDEBAR */}
+        <div className="sidebar-mobile-auth">
+          {!currentUser ? (
+            <button
+              className="sidebar-mobile-login-btn"
+              onClick={() => navigateTo("login")}
+            >
+              <span className="nav-icon">🔐</span>
+              <span>Portal Login</span>
+            </button>
+          ) : (
+            <div className="sidebar-mobile-user-box">
+              <button
+                className="sidebar-mobile-portal-btn"
+                onClick={() => navigateTo("portal")}
+              >
+                <span className="nav-icon">👤</span>
+                <span>{currentUser.name || "My Portal"}</span>
+              </button>
+              <button
+                className="sidebar-mobile-logout-btn"
+                onClick={() => {
+                  handleLogout();
+                  setMobileSidebarOpen(false);
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* SIDEBAR BOTTOM */}
         <div className="sidebar-footer">
           <span>Learn</span>
@@ -235,137 +321,210 @@ function App() {
         </div>
       </aside>
 
-     {/* ================= MAIN CONTENT ================= */}
-<main className="main-content">
-  {/* ================= HEADER (ONE NAVBAR LOGIN) ================= */}
-  {/* ================= HEADER (ONE NAVBAR LOGIN) ================= */}
-  <header className="top-header">
+      {/* ================= MAIN CONTENT ================= */}
+      <main className="main-content">
+        {/* ================= HEADER (ONE NAVBAR LOGIN) ================= */}
+        <header className="top-header">
+          <div className="header-left">
+            {/* MOBILE HAMBURGER BUTTON */}
+            <button
+              type="button"
+              className={`mobile-menu-toggle ${mobileSidebarOpen ? "open" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMobileSidebarOpen(!mobileSidebarOpen);
+              }}
+              aria-label={mobileSidebarOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={mobileSidebarOpen}
+              id="mobile-sidebar-toggle-btn"
+            >
+              <span className="hamburger-line line-1"></span>
+              <span className="hamburger-line line-2"></span>
+              <span className="hamburger-line line-3"></span>
+            </button>
 
-    <div className="header-left">
-      {/* BRAND & LOGO */}
-      <div
-        className="header-brand"
-        onClick={() => navigateTo("home")}
-        title="Sri Venkateswara College of Engineering and Technology"
-      >
-        <div className="college-logo-wrapper">
-          <img src="/college-logo.png" alt="Sri Venkateswara College Logo" className="header-college-logo" />
-        </div>
+            {/* BRAND & LOGO */}
+            <div
+              className="header-brand"
+              onClick={() => navigateTo("home")}
+              title="Sri Venkateswara College of Engineering and Technology"
+            >
+              <div className="college-logo-wrapper">
+                <img src="/college-logo.png" alt="Sri Venkateswara College Logo" className="header-college-logo" />
+              </div>
 
-        <div className="header-title-block">
-          <h1 className="header-main-title">SRI VENKATESWARA</h1>
-          <p className="header-sub-title">College of Engineering and Technology</p>
-        </div>
-      </div>
+              <div className="header-title-block">
+                <h1 className="header-main-title">
+                  <span className="brand-full-name">SRI VENKATESWARA</span>
+                  <span className="brand-short-name">SVCET</span>
+                </h1>
+                <p className="header-sub-title">College of Engineering and Technology</p>
+              </div>
+            </div>
 
-      {/* ACCREDITATIONS */}
-      <div className="accreditation-logos">
-        <img src="/iso.png" alt="ISO Certification" />
-        <img src="/NAAC_LOGO.png" alt="NAAC Logo" />
-        <img src="/naac.png" alt="NAAC Accreditation" />
-        <img src="/All_India_Council_for_Technical_Education_logo.png" alt="AICTE" />
-      </div>
-    </div>
-    
-    <div className="header-right">
-      <p className="autonomous-text">An Autonomous Institution</p>
+            {/* ACCREDITATIONS */}
+            <div className="accreditation-logos">
+              <img src="/iso.png" alt="ISO Certification" />
+              <img src="/NAAC_LOGO.png" alt="NAAC Logo" />
+              <img src="/naac.png" alt="NAAC Accreditation" />
+              <img src="/All_India_Council_for_Technical_Education_logo.png" alt="AICTE" />
+            </div>
+          </div>
+          
+          <div className="header-right">
+            <p className="autonomous-text">An Autonomous Institution</p>
 
-      {!currentUser ? (
-        activeMenu !== "login" && (
-          <button
-            className="login-button"
-            onClick={() => navigateTo("login")}
-            id="nav-login-btn"
-          >
-            Login
-          </button>
-        )
-      ) : (
-        <div className="header-logged-actions">
-          <button
-            className="login-button"
-            onClick={() => navigateTo("portal")}
-            id="nav-portal-btn"
-            title="Go to Portal"
-          >
-            {currentUser.name || (currentUser.role === "college" ? "Admin Portal" : currentUser.role === "faculty" ? "Faculty Portal" : "Student Portal")}
-          </button>
+            {!currentUser ? (
+              activeMenu !== "login" && (
+                <button
+                  className="login-button"
+                  onClick={() => navigateTo("login")}
+                  id="nav-login-btn"
+                >
+                  Login
+                </button>
+              )
+            ) : (
+              <div className="header-logged-actions">
+                <button
+                  className="login-button logged-user-btn"
+                  onClick={() => navigateTo("portal")}
+                  id="nav-portal-btn"
+                  title="Go to Portal"
+                >
+                  <span className="user-btn-icon">👤</span>
+                  <span className="user-btn-name">{currentUser.name || (currentUser.role === "college" ? "Admin" : currentUser.role === "faculty" ? "Faculty" : "Student")}</span>
+                </button>
 
-          <button
-            className="logout-button"
-            onClick={handleLogout}
-            id="nav-logout-btn"
-            title="Logout"
-          >
-            Logout
-          </button>
-        </div>
-      )}
-    </div>
+                <button
+                  className="logout-button"
+                  onClick={handleLogout}
+                  id="nav-logout-btn"
+                  title="Logout"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
 
-  </header>
+        </header>
   
         {/* ================= HOME ================= */}
         {activeMenu === "home" && (
-          <section id="home" className="hero-section">
-            {/* HERO TEXT */}
-            <div className="hero-content">
-              <div className="hero-tag">
-                <span>KNOWLEDGE</span>
-                <span>|</span>
-                <span>INNOVATION</span>
-                <span>|</span>
-                <span>EXCELLENCE</span>
+          <>
+            <section id="home" className="hero-section">
+              {/* HERO TEXT */}
+              <div className="hero-content">
+                <div className="hero-tag">
+                  <span>KNOWLEDGE</span>
+                  <span>|</span>
+                  <span>INNOVATION</span>
+                  <span>|</span>
+                  <span>EXCELLENCE</span>
+                </div>
+
+                <h1>
+                  Welcome to
+                  <br />
+                  Sri Venkateswara College
+                  <br />
+                  of Engineering and Technology
+                </h1>
+
+                <div className="college-accreditation">
+                  <p>
+                    Approved by AICTE, New Delhi
+                    <span className="accreditation-divider"> | </span>
+                    Affiliated to Anna University, Chennai
+                  </p>
+                  <p>
+                    Accredited with Premier NAAC 'A+' Grade
+                    <span className="accreditation-divider"> | </span>
+                    An ISO 9001:2015 Certified Autonomous Institution
+                  </p>
+                </div>
+
+                <p>
+                  Empowering Students Through
+                  <br />
+                  Knowledge, Innovation and Global Industry Readiness
+                </p>
+
+                <div className="hero-action-group">
+                  <button
+                    className="explore-button"
+                    onClick={() => navigateTo("courses")}
+                  >
+                    Explore Programmes →
+                  </button>
+                </div>
               </div>
 
-              <h1>
-                Welcome to
-                <br />
-                Sri Venkateswara College
-                <br />
-                of Engineering and Technology
-              </h1>
-
-              <div className="college-accreditation">
-
-      <p>
-        Approved by AICTE, New Delhi
-        <span className="accreditation-divider"> | </span>
-        Affiliated to Anna University, Chennai
-      </p>
-
-      <p>
-        Accredited by NAAC
-        <span className="accreditation-divider"> | </span>
-        An ISO 9001:2015 Certified
-      </p>
-
-    </div>
-
-              <p>
-                Empowering Students Through
-                <br />
-                Knowledge, Innovation and Excellence
-              </p>
-
-              <button
-                className="explore-button"
-                onClick={() => navigateTo("courses")}
-              >
-                Explore Courses →
-              </button>
-            </div>
-
-            {/* HERO IMAGE */}
-            <div className="hero-image">
-              <img src="college-campus.png" alt="College Campus" />
-              <div className="slider-dots">
-                <span className="active-dot"></span>
-                <span></span>
-                <span></span>
+              {/* HERO IMAGE */}
+              <div className="hero-image">
+                <img src="college-campus.png" alt="College Campus" />
+                <div className="slider-dots">
+                  <span className="active-dot"></span>
+                  <span></span>
+                  <span></span>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+
+            {/* INSTITUTIONAL QUICK ACCESS HUBS */}
+            <section className="quick-access-section">
+              <div className="quick-access-container">
+                <div className="quick-access-header">
+                  <span className="section-tag">INSTITUTIONAL GATEWAYS</span>
+                  <h2>Quick Access &amp; Portals</h2>
+                  <p>Direct navigation to admissions, departments, facilities, training, and student support</p>
+                </div>
+
+                <div className="quick-grid">
+                  <div className="quick-card" onClick={() => navigateTo("courses")}>
+                    <div className="quick-card-icon">💻</div>
+                    <span className="quick-badge">13 PROGRAMMES</span>
+                    <h3>Academic Departments</h3>
+                    <p>Comprehensive syllabi, lecture notes, question papers, and NPTEL links across 13 engineering disciplines.</p>
+                    <span className="quick-action">View Departments →</span>
+                  </div>
+
+                  <div className="quick-card" onClick={() => navigateTo("placement")}>
+                    <div className="quick-card-icon">💼</div>
+                    <span className="quick-badge">174+ OFFERS</span>
+                    <h3>Training &amp; Placements</h3>
+                    <p>4-year career training module, top global recruiters (TCS, Infosys, Zoho), and TPO team contacts.</p>
+                    <span className="quick-action">Placement Insights →</span>
+                  </div>
+
+                  <div className="quick-card" onClick={() => navigateTo("campus")}>
+                    <div className="quick-card-icon">🏫</div>
+                    <span className="quick-badge">INFRASTRUCTURE</span>
+                    <h3>Campus Life &amp; Facilities</h3>
+                    <p>Central Digital Library (50K+ vols), smart ICT amphitheatre classrooms, high-tech AI labs, and sports ground.</p>
+                    <span className="quick-action">Discover Campus →</span>
+                  </div>
+
+                  <div className="quick-card" onClick={() => navigateTo("student-services")}>
+                    <div className="quick-card-icon">🛡️</div>
+                    <span className="quick-badge">STUDENT WELFARE</span>
+                    <h3>Student Services &amp; CoE</h3>
+                    <p>Anti-Ragging Squad (Toll-Free 1800-180-5522), SGRC, ICC, SC/ST Cell, and Autonomous Controller of Exams.</p>
+                    <span className="quick-action">View Services →</span>
+                  </div>
+
+                  <div className="quick-card" onClick={() => navigateTo("iqac")}>
+                    <div className="quick-card-icon">📜</div>
+                    <span className="quick-badge">NAAC 'A+' GRADE</span>
+                    <h3>IQAC &amp; Accreditation</h3>
+                    <p>Quality policy, autonomous conferment orders, AICTE mandatory disclosure, and RTI committee details.</p>
+                    <span className="quick-action">Compliance &amp; IQAC →</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </>
         )}
 
         {/* ================= COURSES ================= */}
@@ -1013,6 +1172,42 @@ function App() {
 
   </section>
 )}
+
+        {/* ================= ABOUT INSTITUTION ================= */}
+        {activeMenu === "about" && (
+          <AboutSection onNavigate={navigateTo} />
+        )}
+
+        {/* ================= ADMISSIONS 2026 ================= */}
+        {activeMenu === "admissions" && (
+          <AdmissionsSection onNavigate={navigateTo} />
+        )}
+
+        {/* ================= CAMPUS LIFE & FACILITIES ================= */}
+        {activeMenu === "campus" && (
+          <CampusLifeSection />
+        )}
+
+        {/* ================= STUDENT SERVICES & STATUTORY COMMITTEES ================= */}
+        {activeMenu === "student-services" && (
+          <StudentServicesSection />
+        )}
+
+        {/* ================= IQAC / NAAC / ACCREDITATION ================= */}
+        {activeMenu === "iqac" && (
+          <IQACSection />
+        )}
+
+        {/* ================= ALUMNI NETWORK ================= */}
+        {activeMenu === "alumni" && (
+          <AlumniSection />
+        )}
+
+        {/* ================= CAMPUS PHOTO GALLERY ================= */}
+        {activeMenu === "gallery" && (
+          <GallerySection />
+        )}
+
         {/* ================= PORTAL (AFTER LOGIN) ================= */}
         {activeMenu === "portal" && (
           currentUser ? (

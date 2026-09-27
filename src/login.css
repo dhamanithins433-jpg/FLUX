@@ -9,7 +9,7 @@
   background:
     radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.05), transparent 30%),
     #f5f7fb;
-  font-family: "Montserrat", sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
 }
 
 
@@ -386,7 +386,7 @@ color: transparent;
 
 
 .role small {
-  font-family: "Montserrat", sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
 
   font-size: 11px;
 
@@ -677,7 +677,7 @@ color: transparent;
 
   color: white;
 
-  font-family: "Montserrat", sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 
   font-size: 14px;
 
@@ -755,7 +755,7 @@ color: transparent;
 
   color: #2563eb;
 
-  font-family: "Montserrat", sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 
   font-size: 11px;
 
@@ -814,7 +814,7 @@ color: transparent;
 
   padding: 0 50px 0 16px;
 
-  font-family: "Montserrat", sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
 
   font-size: 12px;
 
@@ -840,7 +840,7 @@ color: transparent;
 
   color: #172033;
 
-  font-family: "Montserrat", sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
 
   font-size: 12px;
 
@@ -986,100 +986,168 @@ color: transparent;
 ========================================= */
 
 @media (max-width: 700px) {
-
   .login-page {
     flex-direction: column;
-
     min-height: calc(100vh - 70px);
+    width: 100%;
   }
-
 
   .login-brand {
     width: 100%;
-
-    min-height: 280px;
-
-    padding: 35px;
+    min-height: 200px;
+    padding: 28px 20px;
   }
 
-.brand-content h1 {
-    font-size: 35px;
+  .brand-content h1 {
+    font-size: 30px;
   }
-
 
   .brand-title {
-    font-size: 12px;
+    font-size: 11.5px;
   }
-
 
   .brand-description,
   .brand-features {
     display: none;
   }
 
-
   .brand-bottom {
-    left: 35px;
-    bottom: 15px;
+    left: 20px;
+    bottom: 12px;
   }
-
 
   .login-section {
-    padding: 25px 15px;
+    padding: 20px 14px;
+    width: 100%;
   }
-
 
   .login-card {
-    padding: 30px 22px;
-
-    border-radius: 20px;
+    padding: 26px 18px;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 100%;
   }
-
 
   .signup-card {
-    max-width: none;
+    max-width: 100%;
+    padding: 24px 16px;
   }
 
-
-  .signup-select-box select {
-    font-size: 11px;
+  .role-selector {
+    gap: 8px;
+    margin: 20px 0;
   }
-
-}
-
-
-/* =========================================
-   RESPONSIVE — SMALL MOBILE
-========================================= */
-
-@media (max-width: 400px) {
 
   .role {
-    height: 70px;
+    height: auto;
+    min-height: 68px;
+    padding: 8px 6px;
   }
-
 
   .role span {
-    font-size: 18px;
+    font-size: 20px;
+    margin-bottom: 2px;
   }
 
+  .role strong {
+    font-size: 11.5px;
+  }
 
   .role small {
     font-size: 9px;
   }
 
-
-  .login-top h2 {
-    font-size: 25px;
+  .signup-select-box select {
+    font-size: 11px;
   }
 
+  .demo-credentials-strip {
+    padding: 8px 10px;
+    margin-bottom: 14px;
+  }
+
+  .demo-btn {
+    min-width: 75px;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
+
+/* =========================================
+   RESPONSIVE — SMALL MOBILE (<= 420px)
+========================================= */
+@media (max-width: 420px) {
+  .login-brand {
+    min-height: 160px;
+    padding: 20px 16px;
+  }
+
+  .brand-content h1 {
+    font-size: 24px;
+  }
+
+  .login-section {
+    padding: 14px 8px;
+  }
+
+  .login-card {
+    padding: 20px 12px;
+    border-radius: 14px;
+  }
+
+  .login-top h2 {
+    font-size: 22px;
+  }
+
+  .login-subtitle {
+    font-size: 11.5px;
+  }
+
+  .role {
+    min-height: 62px;
+    padding: 6px 4px;
+  }
+
+  .role span {
+    font-size: 18px;
+  }
+
+  .role strong {
+    font-size: 10.5px;
+  }
+
+  .role small {
+    display: none;
+  }
+
+  .login-input-wrapper {
+    height: 44px;
+  }
+
+  .login-input-wrapper input {
+    font-size: 12.5px;
+  }
+
+  .main-login-btn {
+    height: 46px;
+    font-size: 13.5px;
+  }
 
   .create-account {
     flex-wrap: wrap;
-
     text-align: center;
+    gap: 4px;
+    font-size: 12px;
   }
 
+  .signup-card {
+    padding: 18px 10px;
+  }
+
+  .signup-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 /* ================================
    PREMIUM SIGNUP PASSWORD TOGGLE

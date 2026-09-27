@@ -91,12 +91,12 @@ class DatabaseManager:
 
     def execute_query(self, query, params=(), commit=False, fetch_one=False, fetch_all=False):
         conn = self.get_connection()
-        cursor = conn.cursor()
-        # Convert placeholders: MySQL uses %s, SQLite uses ?
         if self.use_mysql:
+            cursor = conn.cursor(buffered=True)
             mysql_query = query.replace('?', '%s')
             cursor.execute(mysql_query, params)
         else:
+            cursor = conn.cursor()
             sqlite_query = query.replace('%s', '?')
             cursor.execute(sqlite_query, params)
 
